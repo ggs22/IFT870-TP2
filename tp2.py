@@ -19,7 +19,7 @@ package_data = pd.read_csv(package_file, sep=';')
 package_data.head()
 
 # %%
-package_data.isnull().sum().sort_values()
+count_missing_values_package = package_data.isnull().sum().sort_values()
 
 # %%
 """
@@ -80,7 +80,7 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 product_data.head()
 
 # %%
-product_data.isnull().sum().sort_values()
+count_missing_values_product = product_data.isnull().sum().sort_values()
 
 # %%
 """
@@ -175,3 +175,141 @@ Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voi
 """
 
 # %%
+"""
+### Colonne STARTMARKETINGDATE
+Les valeurs sont de type date, il n'y a aucune valeur manquante. 
+"""
+
+# %%
+"""
+### Colonne ENDMARKETINGDATE
+Les valeurs sont de type date, il y a un grand nombre de valeurs manquantes. 
+"""
+
+# %%
+"""
+### Colonne MARKETINGCATEGORYNAME
+"""
+
+# %%
+product_data['MARKETINGCATEGORYNAME'].value_counts()
+# %%
+"""
+Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne présente aucune valeur manquante.  
+"""
+# %%
+"""
+### Colonne APPLICATIONNUMBER
+"""
+# %%
+product_data['APPLICATIONNUMBER'].nunique()
+# %%
+"""
+Cette colonne spécifie le numéro de série de la catégorie marketing, présente dans 'MARKETINGCATEGORYNAME'. Le 
+nombre de valeurs manquantes est élevé, et comme il y a un numéro de série pour chaque objet dans une catégorie, 
+le nombre de valeurs différentes est également important.
+"""
+
+# %%
+"""
+### Colonne LABELERNAME
+"""
+
+# %%
+product_data['LABELERNAME'].nunique()
+
+# %%
+product_data['LABELERNAME'][7291:7293]
+# %%
+"""
+La colonne présente peu de valeurs manquantes (557). Si on remarque qu'il existe un nombre important de valeurs 
+différentes, les données sont cependant inconsistantes.
+"""
+
+# %%
+"""
+### Colonne SUBSTANCENAME
+"""
+
+# %%
+product_data['SUBSTANCENAME'].nunique()
+
+# %%
+product_data['SUBSTANCENAME'][727:735]
+
+# %%
+"""
+Cette colonne présente un nombre assez important de données manquantes (2309), ceux sont des données textuelles 
+catégorielles. Or le nombre de catégories parait élevé, comme le montre le nombre de valeurs uniques. Chaque objet 
+peut cependant présenté plusieurs catégories séparées par un ';'.
+"""
+
+# %%
+"""
+### Colonne ACTIVE_NUMERATOR_STRENGTH
+"""
+
+# %%
+product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
+
+# %%
+"""
+Ceux sont des données numériques qui paraissent dupliquées pour le même objet.  
+"""
+
+# %%
+"""
+### Colonne ACTIVE_INGRED_UNIT
+"""
+
+# %%
+product_data['ACTIVE_INGRED_UNIT'][725:731]
+
+# %%
+"""
+Ceux sont des données textuelles catégorielles qui présentent l'unité de la colonne 'ACTIVE_INGRED_UNIT'. Les données
+paraissent également dupliquées pour le même objet.
+"""
+
+# %%
+"""
+### Colonne PHARM_CLASSES
+"""
+
+# %%
+product_data['PHARM_CLASSES'].nunique()
+
+# %%
+product_data['PHARM_CLASSES'][725]
+
+# %%
+"""
+Ceux sont des données textuelles catégorielles présentant plusieurs catégories pour un même objet. Il y a un grand 
+nombre de valeurs manquantes.
+"""
+# %%
+"""
+### Colonne DEASCHEDULE
+"""
+
+# %%
+product_data['DEASCHEDULE'].value_counts()
+
+# %%
+"""
+Cette colonne présente un nombre important de données manquantes. Ceux sont des données catégorielles, présentant 
+seulement 4 catégories.
+"""
+
+# %%
+"""
+### Colonne NDC_EXCLUDE_FLAG
+"""
+
+# %%
+product_data['NDC_EXCLUDE_FLAG'].value_counts()
+
+# %%
+"""
+Cette colonne présente seulement une catégorie 'N'.
+"""
