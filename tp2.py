@@ -330,5 +330,10 @@ Dans les deux tables, il existe des colonnes 'STARTMARKETINGDATE',  'ENDMARKETIN
 Elles semblent présenter les mêmes informations.
 
 ## Corrélation
-
+Il semble pouvoir exister une corrélation entre les attributs 'ROUTENAME' et 'DOSAGEFORMNAME' qui présentent des idées 
+d'administration similaires. 
+On peut également considérer l'existance d'une corrélation entre les modes d'administration
+et les dosages du médicament, donc les attributs 'ROUTENAME', 'DOSAGEFORMNAME' et ceux 'ACTIVE_NUMERATOR_STRENGTH', 
+'ACTIVE_INGRED_UNIT'.
+L'attribut 'PHARM_CLASS' semble pouvoir être corrélé à l'attribut 'SUBSTANCENAME'.
 """
