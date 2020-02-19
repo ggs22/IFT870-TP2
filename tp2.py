@@ -23,14 +23,10 @@ count_missing_values_package = package_data.isnull().sum().sort_values()
 
 # %%
 """
-### Colonne PRODUCTID
-On remarque que, pour chaque objet, la valeur du 'PRODUCTNDC' y est incluse telle un préfixe. Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes. Il y a 41 valeurs nulles.
-"""
-
-# %%
-"""
 ### Colonne PACKAGEDESCRIPTION
-Cette colonne est sous forme de phrase et contient de multiples informations. Le volume, son unité, le nombre de contenant et son type. S'il existe plusieurs contenants pour un objet, ils sont concaténés avec un séparateur '>' de manière hiérarchique. Aussi, on remarque aussi que la valeur du 'NDCPACKAGECODE' de l'objet est incluse entre paranthèses. 
+Cette colonne est présentée sous forme de phrase et contient de multiples informations. Le volume, son unité, le nombre 
+de contenant et son type. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur '>' de 
+manière hiérarchique.
 """
 
 # %%
@@ -84,7 +80,7 @@ count_missing_values_product = product_data.isnull().sum().sort_values()
 
 # %%
 """
-### Colonne PRODUCTID
+### Colonne PRODUCTTYPENAME
 """
 
 # %%
@@ -92,12 +88,6 @@ product_data['PRODUCTTYPENAME'].value_counts()
 
 # %%
 """
-On remarque que, pour chaque objet, la valeur du 'PRODUCTNDC' y est incluse telle un préfixe. Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes.
-"""
-
-# %%
-"""
-### Colonne PRODUCTTYPENAME
 Il y a 7 valeurs possibles textuelles catégorielles dans cette colonne.
 """
 
@@ -145,7 +135,9 @@ product_data['NONPROPRIETARYNAME'][2:6]
 
 # %%
 """
-Cette colonne présente seulement 4 valeurs manquantes. Ceux sont des données textuelles inconsistantes, par exemple pouvant représenter la même valeur en caratères minuscules ou majuscules. Il y a un nombre très important de valeurs différentes.
+Cette colonne présente seulement 4 valeurs manquantes. Ceux sont des données textuelles inconsistantes, par exemple 
+pouvant représenter la même valeur en caratères minuscules ou majuscules. Il y a un nombre très important de valeurs 
+différentes.
 """
 
 # %%
@@ -158,7 +150,8 @@ product_data['DOSAGEFORMNAME'].value_counts()
 
 # %%
 """
-Cette colonne contient 134 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être affectées au même objet. La colonne ne présente aucune valeur manquante.
+Cette colonne contient 134 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
+affectées au même objet. La colonne ne présente aucune valeur manquante.
 """
 
 # %%
@@ -171,7 +164,8 @@ product_data['ROUTENAME'].value_counts()
 
 # %%
 """
-Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être affectées au même objet. La colonne présente 1932 valeurs manquantes.
+Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
+affectées au même objet. La colonne présente 1932 valeurs manquantes.
 """
 
 # %%
@@ -205,9 +199,9 @@ Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne pr
 product_data['APPLICATIONNUMBER'].nunique()
 # %%
 """
-Cette colonne spécifie le numéro de série de la catégorie marketing, présente dans 'MARKETINGCATEGORYNAME'. Le 
-nombre de valeurs manquantes est élevé, et comme il y a un numéro de série pour chaque objet dans une catégorie, 
-le nombre de valeurs différentes est également important.
+Cette colonne spécifie le numéro de série de la catégorie marketing. Le nombre de valeurs manquantes est élevé, et 
+comme il y a un numéro de série pour chaque objet dans une catégorie, le nombre de valeurs différentes est également 
+important.
 """
 
 # %%
@@ -312,4 +306,29 @@ product_data['NDC_EXCLUDE_FLAG'].value_counts()
 # %%
 """
 Cette colonne présente seulement une catégorie 'N'.
+"""
+
+# %%
+"""
+# 2. Relations entre attributs
+## Informations communes
+Les colonnes 'PRODUCTID' des tables 'package' et 'product' contiennent deux informations concaténées: l'id du produit 
+ainsi que le contenu de leur colonne 'PRODUCTNDC', le code label et le code segment produit.  
+Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes.
+
+La colonne 'NDCPACKAGECODE' de la table 'package' contient deux informations concaténées: le code segment du package et 
+le contenu de la colonne 'PRODUCTNDC', le code label et le code segment produit.
+
+La colonne 'PACKAGEDESCRIPTION' de la table 'package' contient plusieurs informations concaténées. En plus des 
+informations propres à la description du package, il y a dans la majorité des objets la valeur 'NDCPACKAGECODE' associée
+.
+
+La colonne 'APPLICATIONNUMBER' de la table 'product' présente la majorité du temps le contenu de la colonne 
+'MARKETINGCATEGORYNAME' et spécifie son numéro de série.
+
+Dans les deux tables, il existe des colonnes 'STARTMARKETINGDATE',  'ENDMARKETINGDATE' et 'NDCEXLUDEDFLAG'. 
+Elles semblent présenter les mêmes informations.
+
+## Corrélation
+
 """
