@@ -1,6 +1,10 @@
 # %%
+import datetime
+
 import numpy as np
 import pandas as pd
+import re
+import datetime
 
 # %%
 package_file = 'package.csv'
@@ -330,6 +334,7 @@ Dans les deux tables, il existe des colonnes 'STARTMARKETINGDATE',  'ENDMARKETIN
 Elles semblent présenter les mêmes informations.
 
 ## Corrélation
+Pour la table 'product':
 Il semble pouvoir exister une corrélation entre les attributs 'ROUTENAME' et 'DOSAGEFORMNAME' qui présentent des idées 
 d'administration similaires. 
 On peut également considérer l'existance d'une corrélation entre les modes d'administration
@@ -337,3 +342,70 @@ et les dosages du médicament, donc les attributs 'ROUTENAME', 'DOSAGEFORMNAME' 
 'ACTIVE_INGRED_UNIT'.
 L'attribut 'PHARM_CLASS' semble pouvoir être corrélé à l'attribut 'SUBSTANCENAME'.
 """
+
+# %%
+"""
+# 3. Correction des incohérences
+On élimine dans un premier temps les duplicata de valeurs dans les attributs 'ACTIVE_NUMERATOR_STRENGTH', 
+'ACTIVE_INGRED_UNIT' de la table 'product'. 
+## Table 'product'
+"""
+
+# %%
+
+# TODO: keep most frequent value
+dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
+for c in dupl_val_cols:
+    product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
+
+# %%
+""""
+On tranforme toutes les valeurs textuelles insconsistantes (majuscule/minuscule) des différents attributs.
+"""
+
+# %%
+inconsistant_cols = ['PROPRIETARYNAME', 'PROPRIETARYNAMESUFFIX', 'NONPROPRIETARYNAME', 'LABELERNAME', 'SUBSTANCENAME',
+                     'ACTIVE_INGRED_UNIT', 'PHARM_CLASSES']
+for c in inconsistant_cols:
+    product_data[c] = product_data[c].str.lower()
+
+# %%
+""""
+Il existerait également une incohérence si l'attribut 'ENDMARKETINGDATE' est moins récent que le 'STARTMARKETINGDATE'.
+On vérifie s'il en existe dans les tables 'product' et 'package'.
+"""
+
+# %%
+
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+for c in date_cols:
+    product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+product_data.loc[
+    (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+
+# %%
+"""
+## Table 'package'
+# TODO
+"""
+# %%
+
+# keep only most informative packaging
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*\> ', value='',
+                                                                                regex=True)
+
+# remove duplicate info NDCPACKAGECODE
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'\(.*', value='',
+                                                                                regex=True)
+
+# %%
+# split info into multiple columns
+# create col with size package
+#########INCOMING
+# search = []
+# for values in package_data['PACKAGESIZE']:
+#     search.append(re.search(r'\d+', values).group())
