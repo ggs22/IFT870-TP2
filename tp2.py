@@ -1,6 +1,10 @@
 # %%
+import datetime
+
 import numpy as np
 import pandas as pd
+import re
+import datetime
 
 # %%
 package_file = 'package.csv'
@@ -61,18 +65,14 @@ assert_product_id_completeness(package_data)
 package_data.head()
 
 # %%
-package_data.isnull().sum().sort_values()
-
-# %%
-"""
-### Colonne PRODUCTID
-On remarque que, pour chaque objet, la valeur du 'PRODUCTNDC' y est incluse telle un préfixe. Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes. Il y a 41 valeurs nulles.
-"""
+count_missing_values_package = package_data.isnull().sum().sort_values()
 
 # %%
 """
 ### Colonne PACKAGEDESCRIPTION
-Cette colonne est sous forme de phrase et contient de multiples informations. Le volume, son unité, le nombre de contenant et son type. S'il existe plusieurs contenants pour un objet, ils sont concaténés avec un séparateur '>' de manière hiérarchique. Aussi, on remarque aussi que la valeur du 'NDCPACKAGECODE' de l'objet est incluse entre paranthèses. 
+Cette colonne est présentée sous forme de phrase et contient de multiples informations. Le volume, son unité, le nombre 
+de contenant et son type. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur '>' de 
+manière hiérarchique.
 """
 
 # %%
@@ -122,11 +122,11 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 product_data.head()
 
 # %%
-product_data.isnull().sum().sort_values()
+count_missing_values_product = product_data.isnull().sum().sort_values()
 
 # %%
 """
-### Colonne PRODUCTID
+### Colonne PRODUCTTYPENAME
 """
 
 # %%
@@ -134,12 +134,6 @@ product_data['PRODUCTTYPENAME'].value_counts()
 
 # %%
 """
-On remarque que, pour chaque objet, la valeur du 'PRODUCTNDC' y est incluse telle un préfixe. Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes.
-"""
-
-# %%
-"""
-### Colonne PRODUCTTYPENAME
 Il y a 7 valeurs possibles textuelles catégorielles dans cette colonne.
 """
 
@@ -187,7 +181,9 @@ product_data['NONPROPRIETARYNAME'][2:6]
 
 # %%
 """
-Cette colonne présente seulement 4 valeurs manquantes. Ceux sont des données textuelles inconsistantes, par exemple pouvant représenter la même valeur en caratères minuscules ou majuscules. Il y a un nombre très important de valeurs différentes.
+Cette colonne présente seulement 4 valeurs manquantes. Ceux sont des données textuelles inconsistantes, par exemple 
+pouvant représenter la même valeur en caratères minuscules ou majuscules. Il y a un nombre très important de valeurs 
+différentes.
 """
 
 # %%
@@ -200,7 +196,8 @@ product_data['DOSAGEFORMNAME'].value_counts()
 
 # %%
 """
-Cette colonne contient 134 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être affectées au même objet. La colonne ne présente aucune valeur manquante.
+Cette colonne contient 134 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
+affectées au même objet. La colonne ne présente aucune valeur manquante.
 """
 
 # %%
@@ -213,7 +210,244 @@ product_data['ROUTENAME'].value_counts()
 
 # %%
 """
-Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être affectées au même objet. La colonne présente 1932 valeurs manquantes.
+Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
+affectées au même objet. La colonne présente 1932 valeurs manquantes.
 """
 
 # %%
+"""
+### Colonne STARTMARKETINGDATE
+Les valeurs sont de type date, il n'y a aucune valeur manquante. 
+"""
+
+# %%
+"""
+### Colonne ENDMARKETINGDATE
+Les valeurs sont de type date, il y a un grand nombre de valeurs manquantes. 
+"""
+
+# %%
+"""
+### Colonne MARKETINGCATEGORYNAME
+"""
+
+# %%
+product_data['MARKETINGCATEGORYNAME'].value_counts()
+# %%
+"""
+Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne présente aucune valeur manquante.  
+"""
+# %%
+"""
+### Colonne APPLICATIONNUMBER
+"""
+# %%
+product_data['APPLICATIONNUMBER'].nunique()
+# %%
+"""
+Cette colonne spécifie le numéro de série de la catégorie marketing. Le nombre de valeurs manquantes est élevé, et 
+comme il y a un numéro de série pour chaque objet dans une catégorie, le nombre de valeurs différentes est également 
+important.
+"""
+
+# %%
+"""
+### Colonne LABELERNAME
+"""
+
+# %%
+product_data['LABELERNAME'].nunique()
+
+# %%
+product_data['LABELERNAME'][7291:7293]
+# %%
+"""
+La colonne présente peu de valeurs manquantes (557). Si on remarque qu'il existe un nombre important de valeurs 
+différentes, les données sont cependant inconsistantes.
+"""
+
+# %%
+"""
+### Colonne SUBSTANCENAME
+"""
+
+# %%
+product_data['SUBSTANCENAME'].nunique()
+
+# %%
+product_data['SUBSTANCENAME'][727:735]
+
+# %%
+"""
+Cette colonne présente un nombre assez important de données manquantes (2309), ceux sont des données textuelles 
+catégorielles. Or le nombre de catégories parait élevé, comme le montre le nombre de valeurs uniques. Chaque objet 
+peut cependant présenté plusieurs catégories séparées par un ';'.
+"""
+
+# %%
+"""
+### Colonne ACTIVE_NUMERATOR_STRENGTH
+"""
+
+# %%
+product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
+
+# %%
+"""
+Ceux sont des données numériques qui paraissent dupliquées pour le même objet.  
+"""
+
+# %%
+"""
+### Colonne ACTIVE_INGRED_UNIT
+"""
+
+# %%
+product_data['ACTIVE_INGRED_UNIT'][725:731]
+
+# %%
+"""
+Ceux sont des données textuelles catégorielles qui présentent l'unité de la colonne 'ACTIVE_INGRED_UNIT'. Les données
+paraissent également dupliquées pour le même objet.
+"""
+
+# %%
+"""
+### Colonne PHARM_CLASSES
+"""
+
+# %%
+product_data['PHARM_CLASSES'].nunique()
+
+# %%
+product_data['PHARM_CLASSES'][725]
+
+# %%
+"""
+Ceux sont des données textuelles catégorielles présentant plusieurs catégories pour un même objet. Il y a un grand 
+nombre de valeurs manquantes.
+"""
+# %%
+"""
+### Colonne DEASCHEDULE
+"""
+
+# %%
+product_data['DEASCHEDULE'].value_counts()
+
+# %%
+"""
+Cette colonne présente un nombre important de données manquantes. Ceux sont des données catégorielles, présentant 
+seulement 4 catégories.
+"""
+
+# %%
+"""
+### Colonne NDC_EXCLUDE_FLAG
+"""
+
+# %%
+product_data['NDC_EXCLUDE_FLAG'].value_counts()
+
+# %%
+"""
+Cette colonne présente seulement une catégorie 'N'.
+"""
+
+# %%
+"""
+# 2. Relations entre attributs
+## Informations communes
+Les colonnes 'PRODUCTID' des tables 'package' et 'product' contiennent deux informations concaténées: l'id du produit 
+ainsi que le contenu de leur colonne 'PRODUCTNDC', le code label et le code segment produit.  
+Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes.
+
+La colonne 'NDCPACKAGECODE' de la table 'package' contient deux informations concaténées: le code segment du package et 
+le contenu de la colonne 'PRODUCTNDC', le code label et le code segment produit.
+
+La colonne 'PACKAGEDESCRIPTION' de la table 'package' contient plusieurs informations concaténées. En plus des 
+informations propres à la description du package, il y a dans la majorité des objets la valeur 'NDCPACKAGECODE' associée
+.
+
+La colonne 'APPLICATIONNUMBER' de la table 'product' présente la majorité du temps le contenu de la colonne 
+'MARKETINGCATEGORYNAME' et spécifie son numéro de série.
+
+Dans les deux tables, il existe des colonnes 'STARTMARKETINGDATE',  'ENDMARKETINGDATE' et 'NDCEXLUDEDFLAG'. 
+Elles semblent présenter les mêmes informations.
+
+## Corrélation
+Pour la table 'product':
+Il semble pouvoir exister une corrélation entre les attributs 'ROUTENAME' et 'DOSAGEFORMNAME' qui présentent des idées 
+d'administration similaires. 
+On peut également considérer l'existance d'une corrélation entre les modes d'administration
+et les dosages du médicament, donc les attributs 'ROUTENAME', 'DOSAGEFORMNAME' et ceux 'ACTIVE_NUMERATOR_STRENGTH', 
+'ACTIVE_INGRED_UNIT'.
+L'attribut 'PHARM_CLASS' semble pouvoir être corrélé à l'attribut 'SUBSTANCENAME'.
+"""
+
+# %%
+"""
+# 3. Correction des incohérences
+On élimine dans un premier temps les duplicata de valeurs dans les attributs 'ACTIVE_NUMERATOR_STRENGTH', 
+'ACTIVE_INGRED_UNIT' de la table 'product'. 
+## Table 'product'
+"""
+
+# %%
+
+# TODO: keep most frequent value
+dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
+for c in dupl_val_cols:
+    product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
+
+# %%
+""""
+On tranforme toutes les valeurs textuelles insconsistantes (majuscule/minuscule) des différents attributs.
+"""
+
+# %%
+inconsistant_cols = ['PROPRIETARYNAME', 'PROPRIETARYNAMESUFFIX', 'NONPROPRIETARYNAME', 'LABELERNAME', 'SUBSTANCENAME',
+                     'ACTIVE_INGRED_UNIT', 'PHARM_CLASSES']
+for c in inconsistant_cols:
+    product_data[c] = product_data[c].str.lower()
+
+# %%
+""""
+Il existerait également une incohérence si l'attribut 'ENDMARKETINGDATE' est moins récent que le 'STARTMARKETINGDATE'.
+On vérifie s'il en existe dans les tables 'product' et 'package'.
+"""
+
+# %%
+
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+for c in date_cols:
+    product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+product_data.loc[
+    (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+
+# %%
+"""
+## Table 'package'
+# TODO
+"""
+# %%
+
+# keep only most informative packaging
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*\> ', value='',
+                                                                                regex=True)
+
+# remove duplicate info NDCPACKAGECODE
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'\(.*', value='',
+                                                                                regex=True)
+
+# %%
+# split info into multiple columns
+# create col with size package
+#########INCOMING
+# search = []
+# for values in package_data['PACKAGESIZE']:
+#     search.append(re.search(r'\d+', values).group())
