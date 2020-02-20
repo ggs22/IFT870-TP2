@@ -7,7 +7,49 @@ package_file = 'package.csv'
 product_file = 'product.csv'
 
 product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
-package_data = pd.read_csv(package_file, sep=';')
+package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
+
+# product_data[:][:]
+
+product_data_description = product_data.describe()
+
+# TODO incohernce entre dates
+# TODO incohernce entre routname / forme
+# TODO incohernce entre valeurs numeric abberantes (ordre de grandeur)
+# TODO incohernce entre valeurs phase et l'emballage
+# TODO tester imputatin itérative
+# TODO utiliser le one hot de sk learn au lieu de dummies de pandas
+
+for index, row in product_data.iterrows():
+    for head in product_data.head():
+        print(head)
+        try:
+            row[head] = row[head].lower()
+        except:
+            pass
+
+def assert_product_id_completeness(data_base):
+
+    empty_cells = data_base.shape[0] - data_base.count(axis=0)
+    unique_values = data_base.nunique(axis=0)
+
+    print('Empty cells:\n{}\n'.format(empty_cells))
+    print('Unique values:\n{}\n'.format(unique_values))
+
+    try:
+        assert empty_cells['PRODUCTID'] == 0
+    except:
+        print('There are {} empty values in the PRODUCTID column'.format(empty_cells['PRODUCTID']))
+    try:
+        assert unique_values['PRODUCTID'] == data_base.shape[0]
+    except:
+        print('There are {} duplicat values in the PRODUCTID column'.format(data_base.shape[0] - unique_values['PRODUCTID']))
+
+print('Assessing completnes of PRODUCTID for product data')
+assert_product_id_completeness(product_data)
+
+print('Assessing completnes of PRODUCTID for packaging data')
+assert_product_id_completeness(package_data)
 
 # %%
 """
