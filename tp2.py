@@ -390,22 +390,51 @@ product_data.loc[
 # %%
 """
 ## Table 'package'
-# TODO
+La colonne 'PACKAGEDESCRIPTION' contient beaucoup trop d'informations pour être exploitable. Tout d'abord, on garde 
+seulement l'information du package le plus informatif (le dernier) car spécifie le volume le plus précis.
+On supprime l'information dupliquée du 'NDCPACKAGECODE'. 
+Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT' et 'PACKAGETYPE'.
+On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 """
 # %%
 
-# keep only most informative packaging
-package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*\> ', value='',
-                                                                                regex=True)
+# keep only most informative packaging and remove duplicate info NDCPACKAGECODE
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
+                                                                                value='', regex=True)
 
-# remove duplicate info NDCPACKAGECODE
-package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'\(.*', value='',
-                                                                                regex=True)
+# split info into multiple columns
+search = {0: [], 1: [], 2: []}
+for values in package_data['PACKAGEDESCRIPTION']:
+    s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
+    for i in range(3):
+        search[i].append(s.group(i+1))
+
+for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
+    package_data[n] = search[i]
+
+package_data = package_data.drop(columns=['PACKAGEDESCRIPTION'])
 
 # %%
-# split info into multiple columns
-# create col with size package
-#########INCOMING
-# search = []
-# for values in package_data['PACKAGESIZE']:
-#     search.append(re.search(r'\d+', values).group())
+"""
+Traimtement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
+"""
+
+# %%
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+for c in date_cols:
+    package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+package_data.loc[
+    (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+
+# %%
+"""
+# Transformation en données numériques
+## Table 'package'
+"""
+
+# %%
+transf_package_data = package_data['PACKAGEUNIT'].str.get_dummies(sep=', ').add_prefix('PACKAGEUNIT')
