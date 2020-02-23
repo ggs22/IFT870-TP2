@@ -481,10 +481,41 @@ transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGES
 # %%
 
 # TODO: change get_dummies to OneHotEncoder
-# convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE
+# convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE to one hot
 transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
 
 # %%
 """
 ## Table 'product'
 """
+
+# %%
+
+transf_product_data = product_data
+
+# transform ROUTENAME and DOSAGEFORMNAME categorial columns (multiple values) to one hot
+transf_product_data = pd.concat([transf_product_data, transf_product_data['ROUTENAME']
+                                .str.get_dummies(sep='; ')
+                                .add_prefix('ROUTENAME')], axis=1)
+transf_product_data = transf_product_data.drop(columns=['ROUTENAME'])
+transf_product_data = pd.concat([transf_product_data, transf_product_data['DOSAGEFORMNAME']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('DOSAGEFORMNAME')], axis=1)
+transf_product_data = transf_product_data.drop(columns=['DOSAGEFORMNAME'])
+
+# %%
+
+# convert PRODUCTTYPENAME, NDC_EXCLUDE_FLAG to one hot
+transf_product_data = pd.get_dummies(data=transf_product_data, columns=['PRODUCTTYPENAME', 'NDC_EXCLUDE_FLAG'])
+
+# convert ACTIVE_NUMERATOR_STRENGTH to proper numerical value
+transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_data['ACTIVE_NUMERATOR_STRENGTH'])
+# %%
+# TODO : one hot MARKETINGCATEGORYNAME
+# TODO: hash PROPRIETARYNAME NONPROPRIETARYNAME LABELERNAME PROPRIETARYNAMESUFFIX
+# TODO: separate and hash SUBSTANCENAME PHARM_CLASSES
+# TODO : split ACTIVE_INGRED_UNIT by '/' (nan others), then one hot each col
+
+# TODO: ideas?? APPLICATIONNUMBER
+# %%
+# TODO : analysis ratio per category
