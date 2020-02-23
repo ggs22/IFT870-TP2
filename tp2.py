@@ -25,7 +25,7 @@ package_data.head()
 
 # %%
 count_missing_values_package = package_data.isnull().sum().sort_values()
-
+# TODO: count uniques values for each column
 # %%
 """
 ### Colonne PACKAGEDESCRIPTION
@@ -82,6 +82,7 @@ product_data.head()
 
 # %%
 count_missing_values_product = product_data.isnull().sum().sort_values()
+# TODO: count uniques values for each column
 
 # %%
 """
@@ -413,11 +414,9 @@ for values in package_data['PACKAGEDESCRIPTION']:
 for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
     package_data[n] = search[i]
 
-package_data = package_data.drop(columns=['PACKAGEDESCRIPTION'])
-
 # %%
 """
-Traimtement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
+Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
 """
 
 # %%
@@ -435,11 +434,24 @@ package_data.loc[
 """
 # 4. Données manquantes
 ## Table 'package'
+On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE.
 """
 
 # %%
+package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+for index, row in values.iterrows():
+    package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
 
-# TODO Gab: missing 'PRODUCTID', 'PRODUCTNDC', 'NDCPACKAGECODE' in 'package'
+# %%
+package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
+for index, row in values.iterrows():
+    package_data.loc[index, 'PRODUCTNDC'] = row[0]
+
+# %%
+# TODO : find a way to retrieve PRODUCTID from 'product' table
+package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
 
 # %%
 """
@@ -454,7 +466,16 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 
 # %%
 """
-# Transformation en données numériques
+# 5. Duplications données
+"""
+
+# %%
+
+# TODO: drop column PACKAGEDESCRIPTION
+
+# %%
+"""
+# Transformation en données numériques (après question 8)
 ## Table 'package'
 """
 
