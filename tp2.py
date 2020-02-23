@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import re
 import datetime
+from sklearn.preprocessing import OneHotEncoder
 
 # %%
 package_file = 'package.csv'
@@ -407,7 +408,7 @@ search = {0: [], 1: [], 2: []}
 for values in package_data['PACKAGEDESCRIPTION']:
     s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
     for i in range(3):
-        search[i].append(s.group(i+1))
+        search[i].append(s.group(i + 1))
 
 for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
     package_data[n] = search[i]
@@ -432,9 +433,58 @@ package_data.loc[
 
 # %%
 """
+# 4. Données manquantes
+## Table 'package'
+"""
+
+# %%
+
+# TODO Gab: missing 'PRODUCTID', 'PRODUCTNDC', 'NDCPACKAGECODE' in 'package'
+
+# %%
+"""
+Il existe des valeurs manquantes pour les colonnes 'STARTMARKETINGDATE' et 'ENDMARKETINGDATE' dans la table 'package'
+mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation précise. 
+"""
+
+# %%
+"""
+## Table 'product'
+"""
+
+# %%
+"""
 # Transformation en données numériques
 ## Table 'package'
 """
 
 # %%
-transf_package_data = package_data['PACKAGEUNIT'].str.get_dummies(sep=', ').add_prefix('PACKAGEUNIT')
+
+transf_package_data = package_data
+
+# TODO: change get_dummies to OneHotEncoder
+# transform PACKAGEUNIT and PACKAGETYPE categorial columns (multiple values) to one hot
+transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGEUNIT']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('PACKAGEUNIT')], axis=1)
+transf_package_data = transf_package_data.drop(columns=['PACKAGEUNIT'])
+transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGETYPE']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('PACKAGETYPE')], axis=1)
+transf_package_data = transf_package_data.drop(columns=['PACKAGETYPE'])
+
+# %%
+
+# convert PACKAGESIZE to proper numerical value
+transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGESIZE'])
+
+# %%
+
+# TODO: change get_dummies to OneHotEncoder
+# convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE
+transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
+
+# %%
+"""
+## Table 'product'
+"""
