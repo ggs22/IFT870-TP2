@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import re
 import datetime
+from sklearn.preprocessing import OneHotEncoder
 
 # %%
 package_file = 'package.csv'
@@ -66,7 +67,7 @@ package_data.head()
 
 # %%
 count_missing_values_package = package_data.isnull().sum().sort_values()
-
+# TODO: count uniques values for each column
 # %%
 """
 ### Colonne PACKAGEDESCRIPTION
@@ -123,6 +124,7 @@ product_data.head()
 
 # %%
 count_missing_values_product = product_data.isnull().sum().sort_values()
+# TODO: count uniques values for each column
 
 # %%
 """
@@ -432,22 +434,151 @@ product_data.loc[
 # %%
 """
 ## Table 'package'
-# TODO
+La colonne 'PACKAGEDESCRIPTION' contient beaucoup trop d'informations pour être exploitable. Tout d'abord, on garde 
+seulement l'information du package le plus informatif (le dernier) car spécifie le volume le plus précis.
+On supprime l'information dupliquée du 'NDCPACKAGECODE'. 
+Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT' et 'PACKAGETYPE'.
+On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 """
 # %%
 
-# keep only most informative packaging
-package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*\> ', value='',
-                                                                                regex=True)
+# keep only most informative packaging and remove duplicate info NDCPACKAGECODE
+package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
+                                                                                value='', regex=True)
 
-# remove duplicate info NDCPACKAGECODE
-package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'\(.*', value='',
-                                                                                regex=True)
+# split info into multiple columns
+search = {0: [], 1: [], 2: []}
+for values in package_data['PACKAGEDESCRIPTION']:
+    s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
+    for i in range(3):
+        search[i].append(s.group(i + 1))
+
+for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
+    package_data[n] = search[i]
 
 # %%
-# split info into multiple columns
-# create col with size package
-#########INCOMING
-# search = []
-# for values in package_data['PACKAGESIZE']:
-#     search.append(re.search(r'\d+', values).group())
+"""
+Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
+"""
+
+# %%
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+for c in date_cols:
+    package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+package_data.loc[
+    (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+
+# %%
+"""
+# 4. Données manquantes
+## Table 'package'
+On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE.
+"""
+
+# %%
+package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+for index, row in values.iterrows():
+    package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
+
+# %%
+package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
+for index, row in values.iterrows():
+    package_data.loc[index, 'PRODUCTNDC'] = row[0]
+
+# %%
+# TODO : find a way to retrieve PRODUCTID from 'product' table
+package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
+
+# %%
+"""
+Il existe des valeurs manquantes pour les colonnes 'STARTMARKETINGDATE' et 'ENDMARKETINGDATE' dans la table 'package'
+mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation précise. 
+"""
+
+# %%
+"""
+## Table 'product'
+"""
+
+# %%
+"""
+# 5. Duplications données
+"""
+
+# %%
+
+# TODO: drop column PACKAGEDESCRIPTION
+
+# %%
+"""
+# Transformation en données numériques (après question 8)
+## Table 'package'
+"""
+
+# %%
+
+transf_package_data = package_data
+
+# TODO: change get_dummies to OneHotEncoder
+# transform PACKAGEUNIT and PACKAGETYPE categorial columns (multiple values) to one hot
+transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGEUNIT']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('PACKAGEUNIT')], axis=1)
+transf_package_data = transf_package_data.drop(columns=['PACKAGEUNIT'])
+transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGETYPE']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('PACKAGETYPE')], axis=1)
+transf_package_data = transf_package_data.drop(columns=['PACKAGETYPE'])
+
+# %%
+
+# convert PACKAGESIZE to proper numerical value
+transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGESIZE'])
+
+# %%
+
+# TODO: change get_dummies to OneHotEncoder
+# convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE to one hot
+transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
+
+# %%
+"""
+## Table 'product'
+"""
+
+# %%
+
+transf_product_data = product_data
+
+# transform ROUTENAME and DOSAGEFORMNAME categorial columns (multiple values) to one hot
+transf_product_data = pd.concat([transf_product_data, transf_product_data['ROUTENAME']
+                                .str.get_dummies(sep='; ')
+                                .add_prefix('ROUTENAME')], axis=1)
+transf_product_data = transf_product_data.drop(columns=['ROUTENAME'])
+transf_product_data = pd.concat([transf_product_data, transf_product_data['DOSAGEFORMNAME']
+                                .str.get_dummies(sep=', ')
+                                .add_prefix('DOSAGEFORMNAME')], axis=1)
+transf_product_data = transf_product_data.drop(columns=['DOSAGEFORMNAME'])
+
+# %%
+
+# convert PRODUCTTYPENAME, NDC_EXCLUDE_FLAG to one hot
+transf_product_data = pd.get_dummies(data=transf_product_data, columns=['PRODUCTTYPENAME', 'NDC_EXCLUDE_FLAG'])
+
+# convert ACTIVE_NUMERATOR_STRENGTH to proper numerical value
+transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_data['ACTIVE_NUMERATOR_STRENGTH'])
+# %%
+# TODO : one hot MARKETINGCATEGORYNAME
+# TODO: hash PROPRIETARYNAME NONPROPRIETARYNAME LABELERNAME PROPRIETARYNAMESUFFIX
+# TODO: separate and hash SUBSTANCENAME PHARM_CLASSES
+# TODO : split ACTIVE_INGRED_UNIT by '/' (nan others), then one hot each col
+
+# TODO: ideas?? APPLICATIONNUMBER
+# %%
+# TODO : analysis ratio per category
