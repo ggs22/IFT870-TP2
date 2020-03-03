@@ -404,7 +404,7 @@ for c in dupl_val_cols:
     product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
 
 # %%
-""""
+"""
 On tranforme toutes les valeurs textuelles insconsistantes (majuscule/minuscule) des différents attributs.
 """
 
@@ -415,7 +415,7 @@ for c in inconsistant_cols:
     product_data[c] = product_data[c].str.lower()
 
 # %%
-""""
+"""
 Il existerait également une incohérence si l'attribut 'ENDMARKETINGDATE' est moins récent que le 'STARTMARKETINGDATE'.
 On vérifie s'il en existe dans les tables 'product' et 'package'.
 """
