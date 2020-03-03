@@ -25,36 +25,36 @@ product_data_description = product_data.describe()
 # TODO tester imputatin itérative
 # TODO utiliser le one hot de sk learn au lieu de dummies de pandas
 
-for index, row in product_data.iterrows():
-    for head in product_data.head():
-        print(head)
-        try:
-            row[head] = row[head].lower()
-        except:
-            pass
+# for index, row in product_data.iterrows():
+#     for head in product_data.head():
+#         try:
+#             row[head] = row[head].lower()
+#         except:
+#             pass
 
-def assert_product_id_completeness(data_base):
+def assert_product_id_completeness(table, header):
 
-    empty_cells = data_base.shape[0] - data_base.count(axis=0)
-    unique_values = data_base.nunique(axis=0)
+    empty_cells = table.shape[0] - table.count(axis=0)
+    null_cells = table.isnull().sum().sort_values()
+    unique_values = table.nunique(axis=0)
 
     print('Empty cells:\n{}\n'.format(empty_cells))
     print('Unique values:\n{}\n'.format(unique_values))
 
     try:
-        assert empty_cells['PRODUCTID'] == 0
+        assert empty_cells[header] == 0
     except:
-        print('There are {} empty values in the PRODUCTID column'.format(empty_cells['PRODUCTID']))
+        print('There are {} empty values in the PRODUCTID column'.format(empty_cells[header]))
     try:
-        assert unique_values['PRODUCTID'] == data_base.shape[0]
+        assert unique_values[header] == table.shape[0]
     except:
-        print('There are {} duplicat values in the PRODUCTID column'.format(data_base.shape[0] - unique_values['PRODUCTID']))
+        print('There are {} duplicat values in the {} column'.format(table.shape[0] - unique_values[header], header))
 
 print('Assessing completnes of PRODUCTID for product data')
-assert_product_id_completeness(product_data)
+assert_product_id_completeness(product_data, 'PRODUCTID')
 
 print('Assessing completnes of PRODUCTID for packaging data')
-assert_product_id_completeness(package_data)
+assert_product_id_completeness(package_data, 'PRODUCTID')
 
 # %%
 """
@@ -67,6 +67,7 @@ package_data.head()
 
 # %%
 count_missing_values_package = package_data.isnull().sum().sort_values()
+count_missing_values_package
 # TODO: count uniques values for each column
 # %%
 """
@@ -582,3 +583,5 @@ transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_
 # TODO: ideas?? APPLICATIONNUMBER
 # %%
 # TODO : analysis ratio per category
+transf_product_data.to_csv('transformed_product_data.csv', sep='\t', encoding='utf-8')
+package_data.to_csv('transformed_package_data.csv', sep='\t', encoding='utf-8')
