@@ -441,8 +441,8 @@ On supprime l'information dupliquée du 'NDCPACKAGECODE'.
 Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT' et 'PACKAGETYPE'.
 On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 """
-# %%
 
+# %%
 # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
 package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
                                                                                 value='', regex=True)
