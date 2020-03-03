@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 .idea/*
 **/.~lock*
+tp2_backup**
+**.swp
