@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ipynb_file_name = 'tp2.ipynb'
+ipynb_file_name='tp2.ipynb'
 
 if [ -e $PWD/$ipynb_file_name ]
 then
@@ -8,4 +8,4 @@ then
 	cp $PWD/$ipynb_file_name $PWD/'tp2_backup_'$date_str'.ipynb'
 fi
 
-ipynb-py-convert ./tp2.py1 ./$ipynb_file_name
+ipynb-py-convert ./tp2.py ./$ipynb_file_name
