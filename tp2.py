@@ -14,10 +14,6 @@ product_file = 'product.csv'
 product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
 package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 
-# product_data[:][:]
-
-product_data_description = product_data.describe()
-
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
 # TODO incohernce entre valeurs numeric abberantes (ordre de grandeur)
@@ -25,30 +21,59 @@ product_data_description = product_data.describe()
 # TODO tester imputatin itérative
 # TODO utiliser le one hot de sk learn au lieu de dummies de pandas
 
-# for index, row in product_data.iterrows():
-#     for head in product_data.head():
-#         try:
-#             row[head] = row[head].lower()
-#         except:
-#             pass
-
-def assert_product_id_completeness(table, header):
+def assert_table_completeness(table, header):
 
     empty_cells = table.shape[0] - table.count(axis=0)
-    null_cells = table.isnull().sum().sort_values()
     unique_values = table.nunique(axis=0)
 
     print('Empty cells:\n{}\n'.format(empty_cells))
     print('Unique values:\n{}\n'.format(unique_values))
 
+def assert_product_id_completeness(table, header):
+
+    empty_cells = table.shape[0] - table.count(axis=0)
+    unique_values = table.nunique(axis=0)
+
     try:
         assert empty_cells[header] == 0
+        print('No empty values in the {} column'.format(header))
     except:
-        print('There are {} empty values in the PRODUCTID column'.format(empty_cells[header]))
+        print('There are {} empty values in the {} column'.format(empty_cells[header], header))
     try:
         assert unique_values[header] == table.shape[0]
+        print('No duplicat values in the {} column'.format(header))
     except:
-        print('There are {} duplicat values in the {} column'.format(table.shape[0] - unique_values[header], header))
+        print('There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
+
+def get_unique_values(table, header=''):
+    uniques={}
+    if header=='':
+        cols = table.columns.values
+        for n,c in enumerate(cols):
+            uniques[c] = pd.unique(table[c])
+    else:
+        uniques[header] =  pd.unique(table[header])
+    return uniques
+
+def df_to_lower(table, columns='all'):
+    cols = table.columns.values if columns == 'all' else columns
+    for c in cols:
+        if type(table[c]) is str:
+            table[c] = table[c].str.lower()
+
+def get_decomposed_uniques(table, header):
+    decomposed_uniques = {}
+    for unique_header, uniques in get_unique_values(table, header).items():
+        tmp_lst = []
+        for val in uniques:
+            if type(val) is str:
+                for decomposed in re.split('[_-|,;:<>/;] ?|^ ', val):
+                    if not decomposed in tmp_lst:
+                            tmp_lst.append(decomposed)
+                            tmp_lst.sort()
+
+        decomposed_uniques[unique_header] = tmp_lst
+    return pd.DataFrame.from_dict(decomposed_uniques)
 
 print('Assessing completnes of PRODUCTID for product data')
 assert_product_id_completeness(product_data, 'PRODUCTID')
@@ -56,6 +81,29 @@ assert_product_id_completeness(product_data, 'PRODUCTID')
 print('Assessing completnes of PRODUCTID for packaging data')
 assert_product_id_completeness(package_data, 'PRODUCTID')
 
+# Make everything lower characters in both tables
+df_to_lower(product_data)
+df_to_lower(package_data)
+
+print('Get unique values for each column of PRODUCT table')
+product_unique_values = get_unique_values(product_data)
+print('Get unique values for each column of PACKAGING table')
+package_unique_values = get_unique_values(package_data)
+
+encoder_dict = {}
+for col in ['ROUTENAME', 'DOSAGEFORMNAME']:
+    print('Get decomposed unique values for column {} of product table'.format(col))
+    uniques_vals = get_decomposed_uniques(product_data, header=col)
+    enc = OneHotEncoder(handle_unknown='ignore')
+    enc.fit_transform(uniques_vals)
+    encoder_dict[col] = enc
+    print(enc.categories_)
+    print(uniques_vals)
+# get actual uniques of a columns
+
+
+test1 = encoder_dict['ROUTENAME'].transform([['ORAL']]).toarray()
+print(test1)
 # %%
 """
 # 1. Auscultation
@@ -67,7 +115,6 @@ package_data.head()
 
 # %%
 count_missing_values_package = package_data.isnull().sum().sort_values()
-count_missing_values_package
 # TODO: count uniques values for each column
 # %%
 """
@@ -403,16 +450,6 @@ dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
 for c in dupl_val_cols:
     product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
 
-# %%
-"""
-On tranforme toutes les valeurs textuelles insconsistantes (majuscule/minuscule) des différents attributs.
-"""
-
-# %%
-inconsistant_cols = ['PROPRIETARYNAME', 'PROPRIETARYNAMESUFFIX', 'NONPROPRIETARYNAME', 'LABELERNAME', 'SUBSTANCENAME',
-                     'ACTIVE_INGRED_UNIT', 'PHARM_CLASSES']
-for c in inconsistant_cols:
-    product_data[c] = product_data[c].str.lower()
 
 # %%
 """
@@ -557,23 +594,24 @@ transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXC
 
 transf_product_data = product_data
 
-# transform ROUTENAME and DOSAGEFORMNAME categorial columns (multiple values) to one hot
-transf_product_data = pd.concat([transf_product_data, transf_product_data['ROUTENAME']
-                                .str.get_dummies(sep='; ')
-                                .add_prefix('ROUTENAME')], axis=1)
-transf_product_data = transf_product_data.drop(columns=['ROUTENAME'])
-transf_product_data = pd.concat([transf_product_data, transf_product_data['DOSAGEFORMNAME']
-                                .str.get_dummies(sep=', ')
-                                .add_prefix('DOSAGEFORMNAME')], axis=1)
-transf_product_data = transf_product_data.drop(columns=['DOSAGEFORMNAME'])
+# # transform ROUTENAME and DOSAGEFORMNAME categorial columns (multiple values) to one hot
+# transf_product_data = pd.concat([transf_product_data, transf_product_data['ROUTENAME']
+#                                 .str.get_dummies(sep='; ')
+#                                 .add_prefix('ROUTENAME')], axis=1)
+# transf_product_data = transf_product_data.drop(columns=['ROUTENAME'])
+# transf_product_data = pd.concat([transf_product_data, transf_product_data['DOSAGEFORMNAME']
+#                                 .str.get_dummies(sep=', ')
+#                                 .add_prefix('DOSAGEFORMNAME')], axis=1)
+# transf_product_data = transf_product_data.drop(columns=['DOSAGEFORMNAME'])
+#
+# # %%
+#
+# # convert PRODUCTTYPENAME, NDC_EXCLUDE_FLAG to one hot
+# transf_product_data = pd.get_dummies(data=transf_product_data, columns=['PRODUCTTYPENAME', 'NDC_EXCLUDE_FLAG'])
+#
+# # convert ACTIVE_NUMERATOR_STRENGTH to proper numerical value
+# transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_data['ACTIVE_NUMERATOR_STRENGTH'])
 
-# %%
-
-# convert PRODUCTTYPENAME, NDC_EXCLUDE_FLAG to one hot
-transf_product_data = pd.get_dummies(data=transf_product_data, columns=['PRODUCTTYPENAME', 'NDC_EXCLUDE_FLAG'])
-
-# convert ACTIVE_NUMERATOR_STRENGTH to proper numerical value
-transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_data['ACTIVE_NUMERATOR_STRENGTH'])
 # %%
 # TODO : one hot MARKETINGCATEGORYNAME
 # TODO: hash PROPRIETARYNAME NONPROPRIETARYNAME LABELERNAME PROPRIETARYNAMESUFFIX
@@ -583,5 +621,7 @@ transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_
 # TODO: ideas?? APPLICATIONNUMBER
 # %%
 # TODO : analysis ratio per category
+
+# Save transformed data to file
 transf_product_data.to_csv('transformed_product_data.csv', sep='\t', encoding='utf-8')
-package_data.to_csv('transformed_package_data.csv', sep='\t', encoding='utf-8')
+transf_package_data.to_csv('transformed_package_data.csv', sep='\t', encoding='utf-8')
