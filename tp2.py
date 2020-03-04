@@ -1,10 +1,10 @@
 # %%
-import datetime
 
 import numpy as np
 import pandas as pd
 import re
-import datetime
+
+from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 
 # %%
@@ -21,7 +21,7 @@ package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 # TODO tester imputatin itérative
 # TODO utiliser le one hot de sk learn au lieu de dummies de pandas
 
-def assert_table_completeness(table, header):
+def assert_table_completeness(table):
 
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
@@ -52,14 +52,16 @@ def get_unique_values(table, header=''):
         for n,c in enumerate(cols):
             uniques[c] = pd.unique(table[c])
     else:
-        uniques[header] =  pd.unique(table[header])
+        uniques[header] = pd.unique(table[header])
     return uniques
 
 def df_to_lower(table, columns='all'):
     cols = table.columns.values if columns == 'all' else columns
     for c in cols:
-        if type(table[c]) is str:
+        try:
             table[c] = table[c].str.lower()
+        except:
+            pass
 
 def get_decomposed_uniques(table, header):
     decomposed_uniques = {}
@@ -67,7 +69,7 @@ def get_decomposed_uniques(table, header):
         tmp_lst = []
         for val in uniques:
             if type(val) is str:
-                for decomposed in re.split('[_-|,;:<>/;] ?|^ ', val):
+                for decomposed in re.split('[_|,;:<>/;] ?|^ ', val):
                     if not decomposed in tmp_lst:
                             tmp_lst.append(decomposed)
                             tmp_lst.sort()
@@ -75,35 +77,61 @@ def get_decomposed_uniques(table, header):
         decomposed_uniques[unique_header] = tmp_lst
     return pd.DataFrame.from_dict(decomposed_uniques)
 
+def get_onehot_encoders(cols):
+    encoder_dict = {}
+    for col in cols:
+        uniques_vals = get_decomposed_uniques(product_data, header=col)
+        enc = OneHotEncoder(handle_unknown='ignore')
+        enc.fit_transform(uniques_vals)
+        encoder_dict[col] = enc
+    return encoder_dict
+
+def onehot_encode(table, header):
+    # print("Encoding... ", end="", flush=True)
+    # char = '\|/-'
+    encoder_dict = get_onehot_encoders([header])
+    for index, row in table.iterrows():
+        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])])
+        if type(row[header]) is str:
+            for decomposed in re.split('[_|,;:<>/;] ?|^ ', row[header]):
+                if not _tmp[0, np.where(encoder_dict[header].categories_[0]==decomposed)] == 1:
+                    _tmp &= encoder_dict[header].transform([[decomposed]])
+            table.loc[index, header] = [_tmp]
+
+# Make everything lower characters in both tables
+df_to_lower(product_data)
+df_to_lower(package_data)
+
+print('Assessing completnes product data table')
+assert_table_completeness(product_data)
+print('Assessing completnes of packaging data table')
+assert_table_completeness(package_data)
+
 print('Assessing completnes of PRODUCTID for product data')
 assert_product_id_completeness(product_data, 'PRODUCTID')
 
 print('Assessing completnes of PRODUCTID for packaging data')
 assert_product_id_completeness(package_data, 'PRODUCTID')
 
-# Make everything lower characters in both tables
-df_to_lower(product_data)
-df_to_lower(package_data)
-
 print('Get unique values for each column of PRODUCT table')
 product_unique_values = get_unique_values(product_data)
 print('Get unique values for each column of PACKAGING table')
 package_unique_values = get_unique_values(package_data)
 
-encoder_dict = {}
-for col in ['ROUTENAME', 'DOSAGEFORMNAME']:
-    print('Get decomposed unique values for column {} of product table'.format(col))
-    uniques_vals = get_decomposed_uniques(product_data, header=col)
-    enc = OneHotEncoder(handle_unknown='ignore')
-    enc.fit_transform(uniques_vals)
-    encoder_dict[col] = enc
-    print(enc.categories_)
-    print(uniques_vals)
-# get actual uniques of a columns
+print('Get decomposed unique values for ROUTENAME column of PRODUCT table')
+product_decomposed_uniques = get_decomposed_uniques(product_data, 'ROUTENAME')
 
+print('Onehot encofing of unique values for ROUTENAME column of PRODUCT table')
+start_time = datetime.now()
+print(start_time)
+onehot_encode(product_data, 'ROUTENAME')
+end_time = datetime.now()
+print('Onehot encofing took {}'.format(end_time-start_time))
+print(end_time)
 
-test1 = encoder_dict['ROUTENAME'].transform([['ORAL']]).toarray()
-print(test1)
+# encoder_dict = get_onehot_encoders(['ROUTENAME', 'DOSAGEFORMNAME'])
+# test1 = encoder_dict['ROUTENAME'].transform([['oral']]).toarray()
+
 # %%
 """
 # 1. Auscultation
@@ -142,7 +170,7 @@ Les valeurs de cette colonne sont de type date. Il existe beaucoup de valeurs ma
 """
 
 # %%
-package_data['NDC_EXCLUDE_FLAG'].unique()
+# package_data['NDC_EXCLUDE_FLAG'].unique()
 
 # %%
 """
@@ -168,10 +196,10 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 """
 
 # %%
-product_data.head()
+# product_data.head()
 
 # %%
-count_missing_values_product = product_data.isnull().sum().sort_values()
+# count_missing_values_product = product_data.isnull().sum().sort_values()
 # TODO: count uniques values for each column
 
 # %%
@@ -180,7 +208,7 @@ count_missing_values_product = product_data.isnull().sum().sort_values()
 """
 
 # %%
-product_data['PRODUCTTYPENAME'].value_counts()
+# product_data['PRODUCTTYPENAME'].value_counts()
 
 # %%
 """
@@ -193,10 +221,10 @@ Il y a 7 valeurs possibles textuelles catégorielles dans cette colonne.
 """
 
 # %%
-product_data['PROPRIETARYNAME'].nunique()
+# product_data['PROPRIETARYNAME'].nunique()
 
 # %%
-product_data['PROPRIETARYNAME'][393:401]
+# product_data['PROPRIETARYNAME'][393:401]
 
 # %%
 """
@@ -210,7 +238,7 @@ différentes formes notamment en minuscules ou majuscules, il existe donc une in
 """
 
 # %%
-product_data['PROPRIETARYNAMESUFFIX'].nunique()
+# product_data['PROPRIETARYNAMESUFFIX'].nunique()
 
 # %%
 """
@@ -224,10 +252,10 @@ Dans cette colonne, il y a un nombre important de valeurs manquantes. Ces valeur
 """
 
 # %%
-product_data['NONPROPRIETARYNAME'].nunique()
+# product_data['NONPROPRIETARYNAME'].nunique()
 
 # %%
-product_data['NONPROPRIETARYNAME'][2:6]
+# product_data['NONPROPRIETARYNAME'][2:6]
 
 # %%
 """
@@ -242,7 +270,7 @@ différentes.
 """
 
 # %%
-product_data['DOSAGEFORMNAME'].value_counts()
+# product_data['DOSAGEFORMNAME'].value_counts()
 
 # %%
 """
@@ -256,7 +284,7 @@ affectées au même objet. La colonne ne présente aucune valeur manquante.
 """
 
 # %%
-product_data['ROUTENAME'].value_counts()
+# product_data['ROUTENAME'].value_counts()
 
 # %%
 """
@@ -282,7 +310,7 @@ Les valeurs sont de type date, il y a un grand nombre de valeurs manquantes.
 """
 
 # %%
-product_data['MARKETINGCATEGORYNAME'].value_counts()
+# product_data['MARKETINGCATEGORYNAME'].value_counts()
 # %%
 """
 Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne présente aucune valeur manquante.  
@@ -292,7 +320,7 @@ Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne pr
 ### Colonne APPLICATIONNUMBER
 """
 # %%
-product_data['APPLICATIONNUMBER'].nunique()
+# product_data['APPLICATIONNUMBER'].nunique()
 # %%
 """
 Cette colonne spécifie le numéro de série de la catégorie marketing. Le nombre de valeurs manquantes est élevé, et 
@@ -306,10 +334,10 @@ important.
 """
 
 # %%
-product_data['LABELERNAME'].nunique()
+# product_data['LABELERNAME'].nunique()
 
 # %%
-product_data['LABELERNAME'][7291:7293]
+# product_data['LABELERNAME'][7291:7293]
 # %%
 """
 La colonne présente peu de valeurs manquantes (557). Si on remarque qu'il existe un nombre important de valeurs 
@@ -322,10 +350,10 @@ différentes, les données sont cependant inconsistantes.
 """
 
 # %%
-product_data['SUBSTANCENAME'].nunique()
+# product_data['SUBSTANCENAME'].nunique()
 
 # %%
-product_data['SUBSTANCENAME'][727:735]
+# product_data['SUBSTANCENAME'][727:735]
 
 # %%
 """
@@ -340,7 +368,7 @@ peut cependant présenté plusieurs catégories séparées par un ';'.
 """
 
 # %%
-product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
+# product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
 
 # %%
 """
@@ -353,7 +381,7 @@ Ceux sont des données numériques qui paraissent dupliquées pour le même obje
 """
 
 # %%
-product_data['ACTIVE_INGRED_UNIT'][725:731]
+# product_data['ACTIVE_INGRED_UNIT'][725:731]
 
 # %%
 """
@@ -367,10 +395,10 @@ paraissent également dupliquées pour le même objet.
 """
 
 # %%
-product_data['PHARM_CLASSES'].nunique()
+# product_data['PHARM_CLASSES'].nunique()
 
 # %%
-product_data['PHARM_CLASSES'][725]
+# product_data['PHARM_CLASSES'][725]
 
 # %%
 """
@@ -383,7 +411,7 @@ nombre de valeurs manquantes.
 """
 
 # %%
-product_data['DEASCHEDULE'].value_counts()
+# product_data['DEASCHEDULE'].value_counts()
 
 # %%
 """
@@ -397,7 +425,7 @@ seulement 4 catégories.
 """
 
 # %%
-product_data['NDC_EXCLUDE_FLAG'].value_counts()
+# product_data['NDC_EXCLUDE_FLAG'].value_counts()
 
 # %%
 """
@@ -446,9 +474,9 @@ On élimine dans un premier temps les duplicata de valeurs dans les attributs 'A
 # %%
 
 # TODO: keep most frequent value
-dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
-for c in dupl_val_cols:
-    product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
+# dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
+# for c in dupl_val_cols:
+#     product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
 
 
 # %%
@@ -459,15 +487,15 @@ On vérifie s'il en existe dans les tables 'product' et 'package'.
 
 # %%
 
-# conversion to datetime format
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-for c in date_cols:
-    product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
-
-# compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# replace ENDMARKETINGDATE to NaT when incoherence
-product_data.loc[
-    (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+# # conversion to datetime format
+# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+# for c in date_cols:
+#     product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+#
+# # compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# # replace ENDMARKETINGDATE to NaT when incoherence
+# product_data.loc[
+#     (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -479,36 +507,36 @@ Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT
 On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 """
 
-# %%
-# keep only most informative packaging and remove duplicate info NDCPACKAGECODE
-package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
-                                                                                value='', regex=True)
-
-# split info into multiple columns
-search = {0: [], 1: [], 2: []}
-for values in package_data['PACKAGEDESCRIPTION']:
-    s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
-    for i in range(3):
-        search[i].append(s.group(i + 1))
-
-for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
-    package_data[n] = search[i]
+# # %%
+# # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
+# package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
+#                                                                                 value='', regex=True)
+#
+# # split info into multiple columns
+# search = {0: [], 1: [], 2: []}
+# for values in package_data['PACKAGEDESCRIPTION']:
+#     s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
+#     for i in range(3):
+#         search[i].append(s.group(i + 1))
+#
+# for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
+#     package_data[n] = search[i]
 
 # %%
 """
 Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
 """
 
-# %%
-# conversion to datetime format
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-for c in date_cols:
-    package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
-
-# compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# replace ENDMARKETINGDATE to NaT when incoherence
-package_data.loc[
-    (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+# # %%
+# # conversion to datetime format
+# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+# for c in date_cols:
+#     package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+#
+# # compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# # replace ENDMARKETINGDATE to NaT when incoherence
+# package_data.loc[
+#     (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -517,21 +545,21 @@ package_data.loc[
 On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE.
 """
 
-# %%
-package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
-values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
-for index, row in values.iterrows():
-    package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
-
-# %%
-package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
-values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
-for index, row in values.iterrows():
-    package_data.loc[index, 'PRODUCTNDC'] = row[0]
+# # %%
+# package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+# values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+# for index, row in values.iterrows():
+#     package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
+#
+# # %%
+# package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+# values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
+# for index, row in values.iterrows():
+#     package_data.loc[index, 'PRODUCTNDC'] = row[0]
 
 # %%
 # TODO : find a way to retrieve PRODUCTID from 'product' table
-package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
+# package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
 
 # %%
 """
@@ -560,30 +588,30 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 """
 
 # %%
-
+#
 transf_package_data = package_data
-
-# TODO: change get_dummies to OneHotEncoder
-# transform PACKAGEUNIT and PACKAGETYPE categorial columns (multiple values) to one hot
-transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGEUNIT']
-                                .str.get_dummies(sep=', ')
-                                .add_prefix('PACKAGEUNIT')], axis=1)
-transf_package_data = transf_package_data.drop(columns=['PACKAGEUNIT'])
-transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGETYPE']
-                                .str.get_dummies(sep=', ')
-                                .add_prefix('PACKAGETYPE')], axis=1)
-transf_package_data = transf_package_data.drop(columns=['PACKAGETYPE'])
+#
+# # TODO: change get_dummies to OneHotEncoder
+# # transform PACKAGEUNIT and PACKAGETYPE categorial columns (multiple values) to one hot
+# transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGEUNIT']
+#                                 .str.get_dummies(sep=', ')
+#                                 .add_prefix('PACKAGEUNIT')], axis=1)
+# transf_package_data = transf_package_data.drop(columns=['PACKAGEUNIT'])
+# transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGETYPE']
+#                                 .str.get_dummies(sep=', ')
+#                                 .add_prefix('PACKAGETYPE')], axis=1)
+# transf_package_data = transf_package_data.drop(columns=['PACKAGETYPE'])
+#
+# # %%
+#
+# # convert PACKAGESIZE to proper numerical value
+# transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGESIZE'])
 
 # %%
 
-# convert PACKAGESIZE to proper numerical value
-transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGESIZE'])
-
-# %%
-
-# TODO: change get_dummies to OneHotEncoder
-# convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE to one hot
-transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
+# # TODO: change get_dummies to OneHotEncoder
+# # convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE to one hot
+# transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
 
 # %%
 """
