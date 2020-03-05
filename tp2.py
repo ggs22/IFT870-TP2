@@ -88,15 +88,39 @@ def get_onehot_encoders(cols):
     return encoder_dict
 
 def onehot_encode(table, header):
-    # print("Encoding... ", end="", flush=True)
-    # char = '\|/-'
+    print("Encoding... |", end="", flush=True)
+    char = '_.\'^'
     encoder_dict = get_onehot_encoders([header])
-    for index, row in table.iterrows():
+    count = 0
+    char_count = 0
+    lst = []
+    for index in range(table.shape[0]):
         _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
-        if type(row[header]) is str:
-            for decomposed in re.split('[_|,;:<>/;] ?|^ ', row[header]):
+        if type(table.loc[index, header]) is str:
+            for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
                 _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-            table.loc[index, header] = [_tmp]
+            lst.append([_tmp])
+
+            if count%1000==0:
+                print("\b", end="", flush=True)
+                print(char[char_count], end="", flush=True)
+                char_count += 1
+                count = 0
+                if char_count == len(char):
+                    char_count = 0
+            count += 1
+
+    print("\b", flush=True)
+    table.loc[:, header] = pd.Series(lst)
+
+def time_methode(methode, **kwargs):
+    print('Timing {}'.format(methode.__name__))
+    start_time = datetime.now()
+    print('Start time: {}'.format(start_time))
+    methode(**kwargs)
+    end_time = datetime.now()
+    print('End time: {}'.format(end_time))
+    print('{} took: {}'.format(methode.__name__, end_time - start_time))
 
 # Make everything lower characters in both tables
 df_to_lower(product_data)
@@ -118,21 +142,8 @@ product_unique_values = get_unique_values(product_data)
 print('Get unique values for each column of PACKAGING table')
 package_unique_values = get_unique_values(package_data)
 
-# product_data.loc['SUBSTANCENAME'] = product_data.loc['SUBSTANCENAME']
-
-# print('Get decomposed unique values for ROUTENAME column of PRODUCT table')
-# product_decomposed_uniques = get_decomposed_uniques(product_data, 'ROUTENAME')
-
-print('Onehot encofing of unique values for ROUTENAME column of PRODUCT table')
-start_time = datetime.now()
-print(start_time)
-onehot_encode(product_data, 'ROUTENAME')
-end_time = datetime.now()
-print('Onehot encofing took {}'.format(end_time-start_time))
-print(end_time)
-
-# encoder_dict = get_onehot_encoders(['ROUTENAME', 'DOSAGEFORMNAME'])
-# test1 = encoder_dict['ROUTENAME'].transform([['oral']]).toarray()
+kwargs = {'table':product_data, 'header':'ROUTENAME'}
+time_methode(onehot_encode, **kwargs)
 
 # %%
 """
