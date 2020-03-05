@@ -142,9 +142,6 @@ product_unique_values = get_unique_values(product_data)
 print('Get unique values for each column of PACKAGING table')
 package_unique_values = get_unique_values(package_data)
 
-kwargs = {'table':product_data, 'header':'ROUTENAME'}
-time_methode(onehot_encode, **kwargs)
-
 # %%
 """
 # 1. Auscultation
@@ -152,10 +149,10 @@ time_methode(onehot_encode, **kwargs)
 """
 
 # %%
-# package_data.head()
+package_data.head()
 
 # %%
-# count_missing_values_package = package_data.isnull().sum().sort_values()
+count_missing_values_package = package_data.isnull().sum().sort_values()
 # TODO: count uniques values for each column
 # %%
 """
@@ -183,7 +180,7 @@ Les valeurs de cette colonne sont de type date. Il existe beaucoup de valeurs ma
 """
 
 # %%
-# package_data['NDC_EXCLUDE_FLAG'].unique()
+package_data['NDC_EXCLUDE_FLAG'].unique()
 
 # %%
 """
@@ -196,7 +193,7 @@ Tous les objets possèdent la valeur N et ne présente aucune valeur manquante.
 """
 
 # %%
-# package_data['SAMPLE_PACKAGE'].value_counts()
+package_data['SAMPLE_PACKAGE'].value_counts()
 
 # %%
 """
@@ -209,10 +206,10 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 """
 
 # %%
-# product_data.head()
+product_data.head()
 
 # %%
-# count_missing_values_product = product_data.isnull().sum().sort_values()
+count_missing_values_product = product_data.isnull().sum().sort_values()
 # TODO: count uniques values for each column
 
 # %%
@@ -221,7 +218,7 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 """
 
 # %%
-# product_data['PRODUCTTYPENAME'].value_counts()
+product_data['PRODUCTTYPENAME'].value_counts()
 
 # %%
 """
@@ -234,7 +231,7 @@ Il y a 7 valeurs possibles textuelles catégorielles dans cette colonne.
 """
 
 # %%
-# product_data['PROPRIETARYNAME'].nunique()
+product_data['PROPRIETARYNAME'].nunique()
 
 # %%
 # product_data['PROPRIETARYNAME'][393:401]
@@ -251,7 +248,7 @@ différentes formes notamment en minuscules ou majuscules, il existe donc une in
 """
 
 # %%
-# product_data['PROPRIETARYNAMESUFFIX'].nunique()
+product_data['PROPRIETARYNAMESUFFIX'].nunique()
 
 # %%
 """
@@ -265,10 +262,10 @@ Dans cette colonne, il y a un nombre important de valeurs manquantes. Ces valeur
 """
 
 # %%
-# product_data['NONPROPRIETARYNAME'].nunique()
+product_data['NONPROPRIETARYNAME'].nunique()
 
 # %%
-# product_data['NONPROPRIETARYNAME'][2:6]
+product_data['NONPROPRIETARYNAME'][2:6]
 
 # %%
 """
@@ -283,7 +280,7 @@ différentes.
 """
 
 # %%
-# product_data['DOSAGEFORMNAME'].value_counts()
+product_data['DOSAGEFORMNAME'].value_counts()
 
 # %%
 """
@@ -297,7 +294,7 @@ affectées au même objet. La colonne ne présente aucune valeur manquante.
 """
 
 # %%
-# product_data['ROUTENAME'].value_counts()
+product_data['ROUTENAME'].value_counts()
 
 # %%
 """
@@ -323,7 +320,7 @@ Les valeurs sont de type date, il y a un grand nombre de valeurs manquantes.
 """
 
 # %%
-# product_data['MARKETINGCATEGORYNAME'].value_counts()
+product_data['MARKETINGCATEGORYNAME'].value_counts()
 # %%
 """
 Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne présente aucune valeur manquante.  
@@ -333,7 +330,7 @@ Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne pr
 ### Colonne APPLICATIONNUMBER
 """
 # %%
-# product_data['APPLICATIONNUMBER'].nunique()
+product_data['APPLICATIONNUMBER'].nunique()
 # %%
 """
 Cette colonne spécifie le numéro de série de la catégorie marketing. Le nombre de valeurs manquantes est élevé, et 
@@ -347,10 +344,10 @@ important.
 """
 
 # %%
-# product_data['LABELERNAME'].nunique()
+product_data['LABELERNAME'].nunique()
 
 # %%
-# product_data['LABELERNAME'][7291:7293]
+product_data['LABELERNAME'][7291:7293]
 # %%
 """
 La colonne présente peu de valeurs manquantes (557). Si on remarque qu'il existe un nombre important de valeurs 
@@ -363,10 +360,10 @@ différentes, les données sont cependant inconsistantes.
 """
 
 # %%
-# product_data['SUBSTANCENAME'].nunique()
+product_data['SUBSTANCENAME'].nunique()
 
 # %%
-# product_data['SUBSTANCENAME'][727:735]
+product_data['SUBSTANCENAME'][727:735]
 
 # %%
 """
@@ -381,7 +378,7 @@ peut cependant présenté plusieurs catégories séparées par un ';'.
 """
 
 # %%
-# product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
+product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
 
 # %%
 """
@@ -394,7 +391,7 @@ Ceux sont des données numériques qui paraissent dupliquées pour le même obje
 """
 
 # %%
-# product_data['ACTIVE_INGRED_UNIT'][725:731]
+product_data['ACTIVE_INGRED_UNIT'][725:731]
 
 # %%
 """
@@ -408,10 +405,10 @@ paraissent également dupliquées pour le même objet.
 """
 
 # %%
-# product_data['PHARM_CLASSES'].nunique()
+product_data['PHARM_CLASSES'].nunique()
 
 # %%
-# product_data['PHARM_CLASSES'][725]
+product_data['PHARM_CLASSES'][725]
 
 # %%
 """
@@ -424,7 +421,7 @@ nombre de valeurs manquantes.
 """
 
 # %%
-# product_data['DEASCHEDULE'].value_counts()
+product_data['DEASCHEDULE'].value_counts()
 
 # %%
 """
@@ -438,7 +435,7 @@ seulement 4 catégories.
 """
 
 # %%
-# product_data['NDC_EXCLUDE_FLAG'].value_counts()
+product_data['NDC_EXCLUDE_FLAG'].value_counts()
 
 # %%
 """
@@ -500,15 +497,15 @@ On vérifie s'il en existe dans les tables 'product' et 'package'.
 
 # %%
 
-# # conversion to datetime format
-# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-# for c in date_cols:
-#     product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
-#
-# # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# # replace ENDMARKETINGDATE to NaT when incoherence
-# product_data.loc[
-#     (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+for c in date_cols:
+    product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+product_data.loc[
+    (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -540,16 +537,16 @@ On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
 """
 
-# # %%
-# # conversion to datetime format
-# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-# for c in date_cols:
-#     package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
-#
-# # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# # replace ENDMARKETINGDATE to NaT when incoherence
-# package_data.loc[
-#     (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+# %%
+# conversion to datetime format
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+for c in date_cols:
+    package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+# replace ENDMARKETINGDATE to NaT when incoherence
+package_data.loc[
+    (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -558,21 +555,21 @@ Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement �
 On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE.
 """
 
-# # %%
-# package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
-# values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
-# for index, row in values.iterrows():
-#     package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
-#
-# # %%
-# package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
-# values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
-# for index, row in values.iterrows():
-#     package_data.loc[index, 'PRODUCTNDC'] = row[0]
+# %%
+package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+for index, row in values.iterrows():
+    package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
+
+# %%
+package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
+for index, row in values.iterrows():
+    package_data.loc[index, 'PRODUCTNDC'] = row[0]
 
 # %%
 # TODO : find a way to retrieve PRODUCTID from 'product' table
-# package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
+package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
 
 # %%
 """
@@ -662,6 +659,10 @@ transf_product_data = product_data
 # TODO: ideas?? APPLICATIONNUMBER
 # %%
 # TODO : analysis ratio per category
+
+# Call and time onehot encoding for a column
+kwargs = {'table':product_data, 'header':'ROUTENAME'}
+time_methode(onehot_encode, **kwargs)
 
 # Save transformed data to file
 transf_product_data.to_csv('transformed_product_data.csv', sep='|', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
