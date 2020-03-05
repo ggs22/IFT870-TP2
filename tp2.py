@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import re
+import csv
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
@@ -91,11 +92,10 @@ def onehot_encode(table, header):
     # char = '\|/-'
     encoder_dict = get_onehot_encoders([header])
     for index, row in table.iterrows():
-        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])])
+        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         if type(row[header]) is str:
             for decomposed in re.split('[_|,;:<>/;] ?|^ ', row[header]):
-                if not _tmp[0, np.where(encoder_dict[header].categories_[0]==decomposed)] == 1:
-                    _tmp &= encoder_dict[header].transform([[decomposed]])
+                _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
             table.loc[index, header] = [_tmp]
 
 # Make everything lower characters in both tables
@@ -118,8 +118,10 @@ product_unique_values = get_unique_values(product_data)
 print('Get unique values for each column of PACKAGING table')
 package_unique_values = get_unique_values(package_data)
 
-print('Get decomposed unique values for ROUTENAME column of PRODUCT table')
-product_decomposed_uniques = get_decomposed_uniques(product_data, 'ROUTENAME')
+# product_data.loc['SUBSTANCENAME'] = product_data.loc['SUBSTANCENAME']
+
+# print('Get decomposed unique values for ROUTENAME column of PRODUCT table')
+# product_decomposed_uniques = get_decomposed_uniques(product_data, 'ROUTENAME')
 
 print('Onehot encofing of unique values for ROUTENAME column of PRODUCT table')
 start_time = datetime.now()
@@ -139,10 +141,10 @@ print(end_time)
 """
 
 # %%
-package_data.head()
+# package_data.head()
 
 # %%
-count_missing_values_package = package_data.isnull().sum().sort_values()
+# count_missing_values_package = package_data.isnull().sum().sort_values()
 # TODO: count uniques values for each column
 # %%
 """
@@ -183,7 +185,7 @@ Tous les objets possèdent la valeur N et ne présente aucune valeur manquante.
 """
 
 # %%
-package_data['SAMPLE_PACKAGE'].value_counts()
+# package_data['SAMPLE_PACKAGE'].value_counts()
 
 # %%
 """
@@ -651,5 +653,5 @@ transf_product_data = product_data
 # TODO : analysis ratio per category
 
 # Save transformed data to file
-transf_product_data.to_csv('transformed_product_data.csv', sep='\t', encoding='utf-8')
-transf_package_data.to_csv('transformed_package_data.csv', sep='\t', encoding='utf-8')
+transf_product_data.to_csv('transformed_product_data.csv', sep='|', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
+transf_package_data.to_csv('transformed_package_data.csv', sep='|', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
