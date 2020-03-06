@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 import re
 import csv
-import threading
-import multiprocessing
 import os
 import pickle
 
@@ -68,8 +66,6 @@ def get_unique_values(table, headers=''):
         cols = table.columns.values
         for n, c in enumerate(cols):
             uniques[c] = pd.unique(table[c])
-    # else:
-    #     uniques[headers] = pd.unique(table[headers])
     elif type(headers) is list:
         for header in headers:
             uniques[header] = pd.unique(table[header])
@@ -117,68 +113,24 @@ def get_onehot_encoders(table, cols):
     return encoder_dict
 
 
-def onehot_encode(table, header, threaded=False):
+def onehot_encode(table, header):
     # Create onehot codes for the specidfied column
     lst = []
     encoder_dict = get_onehot_encoders(table, [header])
 
-    if threaded:
-        threads = []
+    count = 0
+    for index in range(table.shape[0]):
+        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
+        if type(table.loc[index, header]) is str:
+            for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
+                _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
+            lst.append(_tmp)
 
-        class _onehot_encode_thread(threading.Thread):
-            def __init__(self, threadID, name, start_index, end_index):
-                threading.Thread.__init__(self)
-                self.threadID = threadID
-                self.name = name
-                self.start_index = start_index
-                self.end_index = end_index
-
-            def run(self):
-                _int_onehot_encode(self.start_index, self.end_index)
-
-        def _int_onehot_encode(start_index, end_index):
-            for index in np.int_(np.linspace(start_index, end_index, (end_index - start_index) + 1)):
-                _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
-                if type(table.loc[index, header]) is str:
-                    for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
-                        _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-                    lst.append(_tmp)
-
-        cpu_count = multiprocessing.cpu_count()
-        step = int(np.floor(table.shape[0] / cpu_count))
-        rem = table.shape[0] % cpu_count;
-        strt = 0
-
-        for i in range(cpu_count):
-            end = step * (i + 1)
-            if i == cpu_count - 1:
-                end += rem - 1
-            thrd = _onehot_encode_thread(i, str(i), strt, end)
-            thrd.start()
-            threads.append(thrd)
-            strt = end + 1
-
-        count = 1
-        for thrd in threads:
-            thrd.join()
-            # Update loading bar
-            progress(1, 1, 'Thread {} finished'.format(count))
-            print('')
-            count += 1
-    else:
-        count = 0
-        for index in range(table.shape[0]):
-            _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
-            if type(table.loc[index, header]) is str:
-                for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
-                    _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-                lst.append(_tmp)
-
-            # Update loading bar
-            if count == 1000:
-                progress(index, table.shape[0])
-                count = 0
-            count += 1
+        # Update loading bar
+        if count == 1000:
+            progress(index, table.shape[0])
+            count = 0
+        count += 1
 
     print(" -> Done", flush=True)
 
