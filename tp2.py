@@ -4,16 +4,31 @@ import numpy as np
 import pandas as pd
 import re
 import csv
+import threading
+import multiprocessing
+import os
+import pickle
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 
 # %%
-package_file = 'package.csv'
-product_file = 'product.csv'
 
-product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
-package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
+product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME']
+package_headers_to_encode = ['PACKAGEUNIT', 'PACKAGETYPE']
+
+target_encoding = 'utf-8'
+separ = '\t'
+
+product_file = 'product.csv'
+package_file = 'package.csv'
+
+encoded_product_file = 'transformed_product_data.csv'
+encoded_package_file = 'transformed_package_data.csv'
+
+product_encode_file_exist = False
+package_encode_file_exist = False
+
 
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
@@ -23,15 +38,14 @@ package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 # TODO utiliser le one hot de sk learn au lieu de dummies de pandas
 
 def assert_table_completeness(table):
-
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
 
     print('Empty cells:\n{}\n'.format(empty_cells))
     print('Unique values:\n{}\n'.format(unique_values))
 
-def assert_product_id_completeness(table, header):
 
+def assert_product_id_completeness(table, header):
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
 
@@ -44,17 +58,25 @@ def assert_product_id_completeness(table, header):
         assert unique_values[header] == table.shape[0]
         print('No duplicat values in the {} column'.format(header))
     except:
-        print('There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
+        print(
+            'There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
 
-def get_unique_values(table, header=''):
-    uniques={}
-    if header=='':
+
+def get_unique_values(table, headers=''):
+    uniques = {}
+    if headers == '':
         cols = table.columns.values
-        for n,c in enumerate(cols):
+        for n, c in enumerate(cols):
             uniques[c] = pd.unique(table[c])
-    else:
-        uniques[header] = pd.unique(table[header])
+    # else:
+    #     uniques[headers] = pd.unique(table[headers])
+    elif type(headers) is list:
+        for header in headers:
+            uniques[header] = pd.unique(table[header])
+    elif type(headers) is str:
+        uniques[headers] = pd.unique(table[headers])
     return uniques
+
 
 def df_to_lower(table, columns='all'):
     cols = table.columns.values if columns == 'all' else columns
@@ -64,81 +86,177 @@ def df_to_lower(table, columns='all'):
         except:
             pass
 
+
 def get_decomposed_uniques(table, header):
     decomposed_uniques = {}
-    for unique_header, uniques in get_unique_values(table, header).items():
-        tmp_lst = []
-        for val in uniques:
-            if type(val) is str:
-                for decomposed in re.split('[_|,;:<>/;] ?|^ ', val):
-                    if not decomposed in tmp_lst:
+    if type(header) is str:
+        for unique_header, uniques in get_unique_values(table, header).items():
+            tmp_lst = []
+            for val in uniques:
+                if type(val) is str:
+                    for decomposed in re.split(' ?[_|,;:<>/;] ?|^ | $', val):
+                        if decomposed != '' and \
+                                not decomposed in tmp_lst:
                             tmp_lst.append(decomposed)
-                            tmp_lst.sort()
 
-        decomposed_uniques[unique_header] = tmp_lst
+            tmp_lst.sort()
+            decomposed_uniques[unique_header] = tmp_lst
+    else:
+        raise TypeError('header should be a string representing a column header')
+
     return pd.DataFrame.from_dict(decomposed_uniques)
 
-def get_onehot_encoders(cols):
+
+def get_onehot_encoders(table, cols):
     encoder_dict = {}
     for col in cols:
-        uniques_vals = get_decomposed_uniques(product_data, header=col)
+        uniques_vals = get_decomposed_uniques(table, header=col)
         enc = OneHotEncoder(handle_unknown='ignore')
         enc.fit_transform(uniques_vals)
         encoder_dict[col] = enc
     return encoder_dict
 
-def onehot_encode(table, header):
-    print("Encoding... |", end="", flush=True)
-    char = '_.\'^'
-    encoder_dict = get_onehot_encoders([header])
-    count = 0
-    char_count = 0
-    lst = []
-    for index in range(table.shape[0]):
-        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
-        if type(table.loc[index, header]) is str:
-            for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
-                _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-            lst.append([_tmp])
 
-            if count%1000==0:
-                print("\b", end="", flush=True)
-                print(char[char_count], end="", flush=True)
-                char_count += 1
+def onehot_encode(table, header, threaded=False):
+    # Create onehot codes for the specidfied column
+    lst = []
+    encoder_dict = get_onehot_encoders(table, [header])
+
+    if threaded:
+        threads = []
+
+        class _onehot_encode_thread(threading.Thread):
+            def __init__(self, threadID, name, start_index, end_index):
+                threading.Thread.__init__(self)
+                self.threadID = threadID
+                self.name = name
+                self.start_index = start_index
+                self.end_index = end_index
+
+            def run(self):
+                _int_onehot_encode(self.start_index, self.end_index)
+
+        def _int_onehot_encode(start_index, end_index):
+            for index in np.int_(np.linspace(start_index, end_index, (end_index - start_index) + 1)):
+                _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
+                if type(table.loc[index, header]) is str:
+                    for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
+                        _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
+                    lst.append(_tmp)
+
+        cpu_count = multiprocessing.cpu_count()
+        step = int(np.floor(table.shape[0] / cpu_count))
+        rem = table.shape[0] % cpu_count;
+        strt = 0
+
+        for i in range(cpu_count):
+            end = step * (i + 1)
+            if i == cpu_count - 1:
+                end += rem - 1
+            thrd = _onehot_encode_thread(i, str(i), strt, end)
+            thrd.start()
+            threads.append(thrd)
+            strt = end + 1
+
+        count = 1
+        for thrd in threads:
+            thrd.join()
+            # Update loading bar
+            progress(1, 1, 'Thread {} finished'.format(count))
+            print('')
+            count += 1
+    else:
+        count = 0
+        for index in range(table.shape[0]):
+            _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
+            if type(table.loc[index, header]) is str:
+                for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
+                    _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
+                lst.append(_tmp)
+
+            # Update loading bar
+            if count == 1000:
+                progress(index, table.shape[0])
                 count = 0
-                if char_count == len(char):
-                    char_count = 0
             count += 1
 
-    print("\b", flush=True)
+    print(" -> Done", flush=True)
+
+    # Replace dataframe column by encoded values
     table.loc[:, header] = pd.Series(lst)
 
-def time_methode(methode, **kwargs):
+    # return the encoder associated to that particular header
+    return encoder_dict[header]
+
+
+def time_methode(methode, status='', **kwargs):
     print('Timing {}'.format(methode.__name__))
+    if status != '':
+        print(status)
     start_time = datetime.now()
     print('Start time: {}'.format(start_time))
-    methode(**kwargs)
+    ret = methode(**kwargs)
     end_time = datetime.now()
     print('End time: {}'.format(end_time))
-    print('{} took: {}'.format(methode.__name__, end_time - start_time))
+    print('{} took: {}'.format(methode.__name__, (end_time - start_time)))
+    if ret != '':
+        return ret
+    else:
+        ret = 0
+    return ret
+
+
+def progress(count, total, status=''):
+    bar_len = 50
+    filled_len = int(round(bar_len * count / float(total)))
+    _str = ''
+    percents = np.ceil(100.0 * count / float(total))
+    bar = '|' * filled_len + '_' * (bar_len - filled_len)
+
+    if status == '':
+        _str = '[{}] {}%'.format(bar, percents)
+    else:
+        _str = '[{}] {}% - {}'.format(bar, percents, status)
+
+    print('\r', end='', flush=True)
+    print(_str, end='', flush=True)
+
+
+product_encode_file_exist = os.path.isfile(encoded_product_file)
+package_encode_file_exist = os.path.isfile(encoded_package_file)
+
+tmp_dic = {}
+
+original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
+original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
+
+if product_encode_file_exist:
+    print('Loading encoded product data from existing file...')
+    product_data = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
+
+    # Populate onehot encoders dictionnary
+    for header in product_headers_to_encode:
+        tmp_dic[header] = pickle.load(open('{}_data_encoder.pkl'.format(header), 'rb'))
+else:
+    product_data = original_product_data
+
+if package_encode_file_exist:
+    print('Loading encoded package data from existing file...')
+    package_data = pd.read_csv(encoded_package_file, sep=separ, encoding=target_encoding)
+
+    # Populate onehot encoders dictionnary
+    for header in package_headers_to_encode:
+        tmp_dic[header] = pickle.load(open('{}_data_encoder.pkl'.format(header), 'rb'))
+else:
+    package_data = original_package_data
 
 # Make everything lower characters in both tables
 df_to_lower(product_data)
 df_to_lower(package_data)
 
-print('Assessing completnes product data table')
-assert_table_completeness(product_data)
-print('Assessing completnes of packaging data table')
-assert_table_completeness(package_data)
-
-print('Assessing completnes of PRODUCTID for product data')
-assert_product_id_completeness(product_data, 'PRODUCTID')
-
-print('Assessing completnes of PRODUCTID for packaging data')
-assert_product_id_completeness(package_data, 'PRODUCTID')
-
-print('Get unique values for each column of PRODUCT table')
-product_unique_values = get_unique_values(product_data)
+print('Get unique values for ROUTENAME column of PRODUCT table')
+product_unique_values = get_decomposed_uniques(product_data, 'ROUTENAME')
+print(product_unique_values)
 print('Get unique values for each column of PACKAGING table')
 package_unique_values = get_unique_values(package_data)
 
@@ -152,8 +270,9 @@ package_unique_values = get_unique_values(package_data)
 package_data.head()
 
 # %%
-count_missing_values_package = package_data.isnull().sum().sort_values()
-# TODO: count uniques values for each column
+print('Assessing completnes of packaging data table')
+assert_table_completeness(package_data)
+
 # %%
 """
 ### Colonne PACKAGEDESCRIPTION
@@ -209,8 +328,8 @@ Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune val
 product_data.head()
 
 # %%
-count_missing_values_product = product_data.isnull().sum().sort_values()
-# TODO: count uniques values for each column
+print('Assessing completnes product data table')
+assert_table_completeness(product_data)
 
 # %%
 """
@@ -495,12 +614,18 @@ Il existerait également une incohérence si l'attribut 'ENDMARKETINGDATE' est m
 On vérifie s'il en existe dans les tables 'product' et 'package'.
 """
 
+
 # %%
 
 # conversion to datetime format
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-for c in date_cols:
-    product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+def date_convert():
+    date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+    for c in date_cols:
+        product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+
+
+if not product_encode_file_exist:
+    time_methode(date_convert)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 # replace ENDMARKETINGDATE to NaT when incoherence
@@ -517,20 +642,22 @@ Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT
 On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 """
 
-# # %%
-# # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
-# package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
-#                                                                                 value='', regex=True)
-#
-# # split info into multiple columns
-# search = {0: [], 1: [], 2: []}
-# for values in package_data['PACKAGEDESCRIPTION']:
-#     s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
-#     for i in range(3):
-#         search[i].append(s.group(i + 1))
-#
-# for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
-#     package_data[n] = search[i]
+# %%
+
+if not package_encode_file_exist:
+    # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
+    package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
+                                                                                    value='', regex=True)
+
+    # split info into multiple columns
+    search = {0: [], 1: [], 2: []}
+    for values in package_data['PACKAGEDESCRIPTION']:
+        s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
+        for i in range(3):
+            search[i].append(s.group(i + 1))
+
+    for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
+        package_data[n] = search[i]
 
 # %%
 """
@@ -538,15 +665,17 @@ Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement �
 """
 
 # %%
-# conversion to datetime format
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-for c in date_cols:
-    package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
 
-# compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# replace ENDMARKETINGDATE to NaT when incoherence
-package_data.loc[
-    (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+if not package_encode_file_exist:
+    # conversion to datetime format
+    date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+    for c in date_cols:
+        package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+
+    # compare STARTMARKETINGDATE and ENDMARKETINGDATE
+    # replace ENDMARKETINGDATE to NaT when incoherence
+    package_data.loc[
+        (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -556,20 +685,24 @@ On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC,
 """
 
 # %%
-package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
-values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
-for index, row in values.iterrows():
-    package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
+if not package_encode_file_exist:
+    package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+    values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+    for index, row in values.iterrows():
+        package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
 
 # %%
-package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
-values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
-for index, row in values.iterrows():
-    package_data.loc[index, 'PRODUCTNDC'] = row[0]
+if not package_encode_file_exist:
+    package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+    values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
+    for index, row in values.iterrows():
+        package_data.loc[index, 'PRODUCTNDC'] = row[0]
 
 # %%
-# TODO : find a way to retrieve PRODUCTID from 'product' table
-package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
+
+if not package_encode_file_exist:
+    # TODO : find a way to retrieve PRODUCTID from 'product' table
+    package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
 
 # %%
 """
@@ -598,60 +731,13 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 """
 
 # %%
-#
-transf_package_data = package_data
-#
-# # TODO: change get_dummies to OneHotEncoder
-# # transform PACKAGEUNIT and PACKAGETYPE categorial columns (multiple values) to one hot
-# transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGEUNIT']
-#                                 .str.get_dummies(sep=', ')
-#                                 .add_prefix('PACKAGEUNIT')], axis=1)
-# transf_package_data = transf_package_data.drop(columns=['PACKAGEUNIT'])
-# transf_package_data = pd.concat([transf_package_data, transf_package_data['PACKAGETYPE']
-#                                 .str.get_dummies(sep=', ')
-#                                 .add_prefix('PACKAGETYPE')], axis=1)
-# transf_package_data = transf_package_data.drop(columns=['PACKAGETYPE'])
-#
-# # %%
-#
-# # convert PACKAGESIZE to proper numerical value
-# transf_package_data['PACKAGESIZE'] = pd.to_numeric(transf_package_data['PACKAGESIZE'])
-
-# %%
-
-# # TODO: change get_dummies to OneHotEncoder
-# # convert NDC_EXCLUDE_FLAG and SAMPLE_PACKAGE to one hot
-# transf_package_data = pd.get_dummies(data=transf_package_data, columns=['NDC_EXCLUDE_FLAG', 'SAMPLE_PACKAGE'])
-
-# %%
 """
 ## Table 'product'
 """
 
 # %%
 
-transf_product_data = product_data
-
-# # transform ROUTENAME and DOSAGEFORMNAME categorial columns (multiple values) to one hot
-# transf_product_data = pd.concat([transf_product_data, transf_product_data['ROUTENAME']
-#                                 .str.get_dummies(sep='; ')
-#                                 .add_prefix('ROUTENAME')], axis=1)
-# transf_product_data = transf_product_data.drop(columns=['ROUTENAME'])
-# transf_product_data = pd.concat([transf_product_data, transf_product_data['DOSAGEFORMNAME']
-#                                 .str.get_dummies(sep=', ')
-#                                 .add_prefix('DOSAGEFORMNAME')], axis=1)
-# transf_product_data = transf_product_data.drop(columns=['DOSAGEFORMNAME'])
-#
-# # %%
-#
-# # convert PRODUCTTYPENAME, NDC_EXCLUDE_FLAG to one hot
-# transf_product_data = pd.get_dummies(data=transf_product_data, columns=['PRODUCTTYPENAME', 'NDC_EXCLUDE_FLAG'])
-#
-# # convert ACTIVE_NUMERATOR_STRENGTH to proper numerical value
-# transf_product_data['ACTIVE_NUMERATOR_STRENGTH'] = pd.to_numeric(transf_product_data['ACTIVE_NUMERATOR_STRENGTH'])
-
 # %%
-# TODO : one hot MARKETINGCATEGORYNAME
 # TODO: hash PROPRIETARYNAME NONPROPRIETARYNAME LABELERNAME PROPRIETARYNAMESUFFIX
 # TODO: separate and hash SUBSTANCENAME PHARM_CLASSES
 # TODO : split ACTIVE_INGRED_UNIT by '/' (nan others), then one hot each col
@@ -660,10 +746,54 @@ transf_product_data = product_data
 # %%
 # TODO : analysis ratio per category
 
+# %%
+"""
+## Encodage onehot
+"""
+
+# %%
+
 # Call and time onehot encoding for a column
-kwargs = {'table':product_data, 'header':'ROUTENAME'}
-time_methode(onehot_encode, **kwargs)
+if not product_encode_file_exist:
+    for header in product_headers_to_encode:
+        kwargs = dict(table=product_data, header=header)
+        tmp_dic[header] = time_methode(onehot_encode, header, **kwargs)
+        pickle.dump(tmp_dic[header], open('{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+
+if not package_encode_file_exist:
+    for header in package_headers_to_encode:
+        kwargs = dict(table=package_data, header=header)
+        tmp_dic[header] = time_methode(onehot_encode, header, **kwargs)
+        pickle.dump(tmp_dic[header], open('{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+
+for header, enc in tmp_dic.items():
+    file = open('Encoding_{}.txt'.format(header), 'w')
+    for category in enc.categories_[0]:
+        tmp_str = str(enc.transform([[category]]).toarray())
+        tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
+        file.write(tmp_str)
+    file.close()
 
 # Save transformed data to file
-transf_product_data.to_csv('transformed_product_data.csv', sep='|', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
-transf_package_data.to_csv('transformed_package_data.csv', sep='|', encoding='utf-8', quoting=csv.QUOTE_NONNUMERIC)
+if not product_encode_file_exist:
+    kwargs = dict(path_or_buf= encoded_product_file, index= False, sep= separ, encoding= target_encoding,
+              quoting= csv.QUOTE_NONNUMERIC)
+    time_methode(product_data.to_csv, **kwargs)
+
+if not product_encode_file_exist:
+    kwargs = dict(path_or_buf=encoded_package_file, index=False, sep=separ, encoding=target_encoding,
+                  quoting=csv.QUOTE_NONNUMERIC)
+    time_methode(package_data.to_csv, **kwargs)
+
+# %%
+"""
+## Résultats
+"""
+
+# %%
+print('Encoded product data:')
+product_data
+
+# %%
+print('Encoded packaging data:')
+package_data

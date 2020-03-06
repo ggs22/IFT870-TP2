@@ -127,8 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Project-specific
 .idea/*
 **/.~lock*
 tp2_backup**
 **.swp
 transformed_p*.csv
+Encoding_*.txt
+*_data_encoder.pkl
