@@ -1,0 +1,7 @@
+cellular therapy                        [[1. 0. 0. 0. 0. 0. 0.]]
+human otc drug                          [[0. 1. 0. 0. 0. 0. 0.]]
+human prescription drug                 [[0. 0. 1. 0. 0. 0. 0.]]
+non-standardized allergenic             [[0. 0. 0. 1. 0. 0. 0.]]
+plasma derivative                       [[0. 0. 0. 0. 1. 0. 0.]]
+standardized allergenic                 [[0. 0. 0. 0. 0. 1. 0.]]
+vaccine                                 [[0. 0. 0. 0. 0. 0. 1.]]

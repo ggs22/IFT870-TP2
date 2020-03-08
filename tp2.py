@@ -12,14 +12,18 @@ from sklearn.preprocessing import OneHotEncoder
 
 # %%
 
-product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME']
+product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME', 'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
 package_headers_to_encode = ['PACKAGEUNIT', 'PACKAGETYPE']
 
 target_encoding = 'utf-8'
 separ = '\t'
+custom_sep = ' ?[|,;:<>] ?|^ | $'
 
-product_file = 'product.csv'
-package_file = 'package.csv'
+product_file = 'Product2.csv'
+package_file = 'Package2.csv'
+
+encoder_dir = 'encoders/'
+encoding_dir = 'enconding_dic/'
 
 encoded_product_file = 'transformed_product_data.csv'
 encoded_package_file = 'transformed_package_data.csv'
@@ -33,7 +37,6 @@ package_encode_file_exist = False
 # TODO incohernce entre valeurs numeric abberantes (ordre de grandeur)
 # TODO incohernce entre valeurs phase et l'emballage
 # TODO tester imputatin itérative
-# TODO utiliser le one hot de sk learn au lieu de dummies de pandas
 
 def assert_table_completeness(table):
     empty_cells = table.shape[0] - table.count(axis=0)
@@ -47,17 +50,15 @@ def assert_product_id_completeness(table, header):
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
 
-    try:
-        assert empty_cells[header] == 0
+    if empty_cells[header] == 0:
         print('No empty values in the {} column'.format(header))
-    except:
+    else:
         print('There are {} empty values in the {} column'.format(empty_cells[header], header))
-    try:
-        assert unique_values[header] == table.shape[0]
+
+    if unique_values[header] == table.shape[0]:
         print('No duplicat values in the {} column'.format(header))
-    except:
-        print(
-            'There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
+    else:
+        print('There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
 
 
 def get_unique_values(table, headers=''):
@@ -90,9 +91,8 @@ def get_decomposed_uniques(table, header):
             tmp_lst = []
             for val in uniques:
                 if type(val) is str:
-                    for decomposed in re.split(' ?[_|,;:<>/;] ?|^ | $', val):
-                        if decomposed != '' and \
-                                not decomposed in tmp_lst:
+                    for decomposed in re.split(custom_sep, val):
+                        if decomposed != '' and not decomposed in tmp_lst:
                             tmp_lst.append(decomposed)
 
             tmp_lst.sort()
@@ -122,7 +122,7 @@ def onehot_encode(table, header):
     for index in range(table.shape[0]):
         _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         if type(table.loc[index, header]) is str:
-            for decomposed in re.split('[_|,;:<>/;] ?|^ ', table.loc[index, header]):
+            for decomposed in re.split(custom_sep, table.loc[index, header]):
                 _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
             lst.append(_tmp)
 
@@ -163,21 +163,26 @@ def progress(count, total, status=''):
     filled_len = int(round(bar_len * count / float(total)))
     _str = ''
     percents = np.ceil(100.0 * count / float(total))
-    bar = '|' * filled_len + '_' * (bar_len - filled_len)
+    bar = '=' * filled_len + ':' * (bar_len - filled_len)
 
     if status == '':
-        _str = '[{}] {}%'.format(bar, percents)
+        _str = '|{}| {}%'.format(bar, percents)
     else:
-        _str = '[{}] {}% - {}'.format(bar, percents, status)
+        _str = '|{}| {}% - {}'.format(bar, percents, status)
 
     print('\r', end='', flush=True)
     print(_str, end='', flush=True)
 
 
+"""
+Load data:
+    Will look for existing files to deserialize prior encoding data. If the files are not found
+    it will proceed with the original data through encoding.
+"""
 product_encode_file_exist = os.path.isfile(encoded_product_file)
 package_encode_file_exist = os.path.isfile(encoded_package_file)
 
-tmp_dic = {}
+enc_dic = {}
 
 original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
 original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
@@ -188,7 +193,7 @@ if product_encode_file_exist:
 
     # Populate onehot encoders dictionnary
     for header in product_headers_to_encode:
-        tmp_dic[header] = pickle.load(open('{}_data_encoder.pkl'.format(header), 'rb'))
+        enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
     product_data = original_product_data
 
@@ -198,7 +203,7 @@ if package_encode_file_exist:
 
     # Populate onehot encoders dictionnary
     for header in package_headers_to_encode:
-        tmp_dic[header] = pickle.load(open('{}_data_encoder.pkl'.format(header), 'rb'))
+        enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
     package_data = original_package_data
 
@@ -206,11 +211,11 @@ else:
 df_to_lower(product_data)
 df_to_lower(package_data)
 
-print('Get unique values for ROUTENAME column of PRODUCT table')
-product_unique_values = get_decomposed_uniques(product_data, 'ROUTENAME')
-print(product_unique_values)
-print('Get unique values for each column of PACKAGING table')
-package_unique_values = get_unique_values(package_data)
+if product_encode_file_exist:
+    print('Get unique values for ROUTENAME column of PRODUCT table')
+    product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
+    print(product_unique_values)
+    print(enc_dic['ROUTENAME'].categories_[0])
 
 # %%
 """
@@ -705,21 +710,24 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 
 # %%
 
-# Call and time onehot encoding for a column
+# Call and time onehot encoding for all predefined columns
+if not os.path.isdir(encoder_dir):
+    os.mkdir(encoder_dir)
 if not product_encode_file_exist:
     for header in product_headers_to_encode:
-        kwargs = dict(table=product_data, header=header)
-        tmp_dic[header] = time_methode(onehot_encode, header, **kwargs)
-        pickle.dump(tmp_dic[header], open('{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product_data, header=header)))
+        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
 
 if not package_encode_file_exist:
     for header in package_headers_to_encode:
-        kwargs = dict(table=package_data, header=header)
-        tmp_dic[header] = time_methode(onehot_encode, header, **kwargs)
-        pickle.dump(tmp_dic[header], open('{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package_data, header=header)))
+        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
 
-for header, enc in tmp_dic.items():
-    file = open('Encoding_{}.txt'.format(header), 'w')
+if not os.path.isdir(encoding_dir):
+    os.mkdir(encoding_dir)
+# Prints out encding of each category for a given column in a txt file
+for header, enc in enc_dic.items():
+    file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
     for category in enc.categories_[0]:
         tmp_str = str(enc.transform([[category]]).toarray())
         tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
@@ -728,14 +736,18 @@ for header, enc in tmp_dic.items():
 
 # Save transformed data to file
 if not product_encode_file_exist:
-    kwargs = dict(path_or_buf= encoded_product_file, index= False, sep= separ, encoding= target_encoding,
-              quoting= csv.QUOTE_NONNUMERIC)
-    time_methode(product_data.to_csv, **kwargs)
+    time_methode(product_data.to_csv, **(dict(path_or_buf= encoded_product_file,
+                                              index= False,
+                                              sep= separ,
+                                              encoding= target_encoding,
+                                              quoting= csv.QUOTE_NONNUMERIC)))
 
 if not product_encode_file_exist:
-    kwargs = dict(path_or_buf=encoded_package_file, index=False, sep=separ, encoding=target_encoding,
-                  quoting=csv.QUOTE_NONNUMERIC)
-    time_methode(package_data.to_csv, **kwargs)
+    time_methode(package_data.to_csv, **(dict(path_or_buf=encoded_package_file,
+                                              index=False,
+                                              sep=separ,
+                                              encoding=target_encoding,
+                                              quoting=csv.QUOTE_NONNUMERIC)))
 
 # %%
 """
@@ -744,8 +756,10 @@ if not product_encode_file_exist:
 
 # %%
 print('Encoded product data:')
+print(product_data)
 product_data
 
 # %%
 print('Encoded packaging data:')
+print(package_data)
 package_data
