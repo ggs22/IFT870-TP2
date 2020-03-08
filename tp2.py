@@ -261,8 +261,6 @@ print('Assessing completeness product data table')
 assert_table_completeness(product_data)
 
 # %%
-
-# %%
 """
 Dans la colonne PRODUCTTYPENAME, on remarque 7 valeurs possibles textuelles catégorielles dans cette colonne et aucune
 valeur manquante. Cette colonne sera donc facilement numérisable. 
@@ -301,7 +299,7 @@ différentes. Cette colonne parait difficilement numérisables et les valeurs ma
 """
 
 # %%
-print(product_data['LABELERNAME'][7253:7256])
+print(product_data['LABELERNAME'][7252:7255])
 
 # %%
 """
@@ -367,43 +365,68 @@ L'attribut 'PHARM_CLASS' semble pouvoir être corrélé à l'attribut 'SUBSTANCE
 # %%
 """
 # 3. Correction des incohérences
-On élimine dans un premier temps les duplicata de valeurs dans les attributs 'ACTIVE_NUMERATOR_STRENGTH', 
-'ACTIVE_INGRED_UNIT' de la table 'product'. 
 ## Table 'product'
-"""
-
-# %%
-
-# TODO: keep most frequent value
-# dupl_val_cols = ['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
-# for c in dupl_val_cols:
-#     product_data[c] = product_data[c].replace(to_replace=r'\;.*', value='', regex=True)
-
-
-# %%
-"""
-Il existerait également une incohérence si l'attribut 'ENDMARKETINGDATE' est moins récent que le 'STARTMARKETINGDATE'.
-On vérifie s'il en existe dans les tables 'product' et 'package'.
+Il y a de nombreux points à vérifier pour la table 'product'. 
+Tout d'abord, on peut s'intéresser aux colonnes date STARTMARKETINGDATE, ENDMARKETINGDATE et 
+LISTING_RECORD_CERTIFIED_THROUGH. 
+On se rend compte de l'existence de données aberrantes que l'on décide d'ignorer et de supprimer leur valeur.
 """
 
 
 # %%
-
 # conversion to datetime format
-def date_convert():
-    date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-    for c in date_cols:
+def date_convert(dc):
+    for c in dc:
         product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
 
 
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 if not product_encode_file_exist:
-    time_methode(date_convert)
+    time_methode(date_convert(date_cols))
+# %%
+"""
+Aussi, il existerait une incohérence si la date de fin de mise sur le marché est moins récente que la date de début de 
+mise sur le marché.
+"""
 
+# %%
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-# replace ENDMARKETINGDATE to NaT when incoherence
-product_data.loc[
-    (product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+nb = product_data[product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']].shape[0]
+print(f"Nombre d'incohérences entre STARTMARKETINGDATE et ENDMARKETINGDATE: {nb}")
 
+# %%
+"""
+La colonne LISTING_RECORD_CERTIFIED_THROUGH permet de savoir si la certification du produit est expiré. On considère 
+donc que le produit n'est plus à jour (et donc à supprimer de notre dataset) si la date précisée dans cette 
+colonne est passée. 
+"""
+# %%
+
+product_data = product_data.drop(product_data[product_data['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
+
+# %%
+"""
+La colonne NDC_EXCLUDE_FLAG ne devrait présenter que des valeurs de la catégorie 'N' pour notre dataset, comme le 
+précise la documentation FDA. On le vérifie simplement:
+"""
+# %%
+
+print(product_data['NDC_EXCLUDE_FLAG'].value_counts())
+
+# %%
+"""
+Les colonnes ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs multiples liées. Leur nombre dans
+chacune des colonnes doit donc être égal. 
+"""
+
+# %%
+
+comp = product_data['ACTIVE_NUMERATOR_STRENGTH'].str.count(';').fillna(0) == \
+       product_data['ACTIVE_INGRED_UNIT'].str.count(';').fillna(0)
+product_data[np.logical_not(comp)][['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']]
+
+# %%
+# TODO: productndc et check categories
 # %%
 """
 ## Table 'package'
