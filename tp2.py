@@ -12,11 +12,13 @@ from sklearn.preprocessing import OneHotEncoder
 
 # %%
 
-product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME', 'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
+product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME',
+                             'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
 package_headers_to_encode = ['PACKAGEUNIT', 'PACKAGETYPE']
 
 target_encoding = 'utf-8'
-separ = '\t'
+# separ = '\t'
+separ = '|'
 custom_sep = ' ?[|,;:<>] ?|^ | $'
 
 product_file = 'Product2.csv'
@@ -58,7 +60,8 @@ def assert_product_id_completeness(table, header):
     if unique_values[header] == table.shape[0]:
         print('No duplicat values in the {} column'.format(header))
     else:
-        print('There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
+        print(
+            'There are {} duplicat values in the {} column\n\n'.format(table.shape[0] - unique_values[header], header))
 
 
 def get_unique_values(table, headers=''):
@@ -187,10 +190,11 @@ enc_dic = {}
 original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
 original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 
+# %%
+
 if product_encode_file_exist:
     print('Loading encoded product data from existing file...')
     product_data = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
-
     # Populate onehot encoders dictionnary
     for header in product_headers_to_encode:
         enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
@@ -217,306 +221,117 @@ if product_encode_file_exist:
     print(product_unique_values)
     print(enc_dic['ROUTENAME'].categories_[0])
 
+# drop useless index columns
+product_data = product_data.drop(product_data.columns[0], axis=1)
+package_data = package_data.drop(package_data.columns[0], axis=1)
+
 # %%
 """
 # 1. Auscultation
+Nous avons déjà prétraitées les données (passage en minuscules des données textuelles) afin de minimiser l'inconsistance
+entre les valeurs.
+
 ## Etude des données du fichier 'package'
 """
 
 # %%
-package_data.head()
-
-# %%
-print('Assessing completnes of packaging data table')
+print('Assessing completeness of packaging data table')
 assert_table_completeness(package_data)
 
 # %%
 """
-### Colonne PACKAGEDESCRIPTION
-Cette colonne est présentée sous forme de phrase et contient de multiples informations. Le volume, son unité, le nombre 
-de contenant et son type. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur '>' de 
-manière hiérarchique.
-"""
+La colonne PRODUCTID présente des valeurs manquantes, qui paraissent bloquantes. Les valeurs manquantes des colonnes 
+STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non bloquantes. Ces deux dernières 
+colonnes sont de type date et les valeurs de STARTMARKETINGDATE ont l'air séquentielles.
 
-# %%
-"""
-### Colonne STARTMARKETINGDATE
-Les valeurs de cette colonne sont de type date. Elles ont l'air séquentielles. 
-"""
+La colonne PACKAGEDESCRIPTION est présentée sous forme de phrase et contient de multiples informations: le type de 
+volume, sa valeur et son unité. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur 
+'>' de manière hiérarchique.
 
-# %%
+Les colonnes NDC_EXCLUDE_FLAG et SAMPLE_PACKAGE, présentant peu de valeurs différentes, et ont l'air facilement 
+traitables numériquement.
 """
-### Colonne ENDMARKETINGDATE
-Les valeurs de cette colonne sont de type date. Il existe beaucoup de valeurs manquantes.
-"""
-
-# %%
-"""
-### Colonne NDC_EXCLUDE_FLAG
-"""
-
-# %%
-package_data['NDC_EXCLUDE_FLAG'].unique()
-
-# %%
-"""
-Tous les objets possèdent la valeur N et ne présente aucune valeur manquante. 
-"""
-
-# %%
-"""
-### Colonne SAMPLE_PACKAGE
-"""
-
-# %%
-package_data['SAMPLE_PACKAGE'].value_counts()
-
-# %%
-"""
-Les valeurs possibles sont 'Y' ou 'N'. Il y a une majorité de 'N' et aucune valeur manquante.
-"""
-
 # %%
 """
 ## Etude des données du fichier 'product'
 """
 
 # %%
-product_data.head()
-
-# %%
-print('Assessing completnes product data table')
+print('Assessing completeness product data table')
 assert_table_completeness(product_data)
 
 # %%
-"""
-### Colonne PRODUCTTYPENAME
-"""
-
-# %%
-product_data['PRODUCTTYPENAME'].value_counts()
 
 # %%
 """
-Il y a 7 valeurs possibles textuelles catégorielles dans cette colonne.
+Dans la colonne PRODUCTTYPENAME, on remarque 7 valeurs possibles textuelles catégorielles dans cette colonne et aucune
+valeur manquante. Cette colonne sera donc facilement numérisable. 
+
+La colonne PROPRIETARYNAME dispose d'un grand nombre de valeurs différentes, de type textuelle. Ces valeurs sont assez 
+variables (phrase, simple mot) décrivant plus ou moins le produit. 
+La colonne PROPRIETARYNAMESUFFIX est du même type que PROPRIETARYNAME, cependant elle présente beaucoup de valeurs 
+nulles, et apporte des informations variantes aux objets. La documentation précise ne pas reconnaître de standard.
+
+La colonne NONPROPRIETARYNAME présente seulement 4 valeurs manquantes mais un nombre très important de valeurs 
+textuelles différentes. Elle indique les ingrédients actifs du produit, donc présente ses valeurs sous forme de liste
+(inconsistante dans sa représentation). Les valeurs manquantes paraissent difficilement remplissables.
+
+La colonne DOSAGEFORMNAME présente des données du standard FDA. En les étudiant, on se rend compte que nous pourrions 
+simplifier notre utilisation du standard. En effet, celui-ci apporte une information principale sur le mode 
+d'administration et présente certaines caractéristiques plus spécifique au mode. Ces dernières pourraient être omises 
+pour notre utilisation car trop spécifiques et pouvant être globalisés en gardant seulement l'information principale
+du mode d'administration.
+
+La colonne ROUTENAME présente des données du standard FDA. Chaque objet a la possibilité d'en contenir plusieurs. On 
+remarque que la représentation de données multiples est consistante, via un séparateur ';'. Il y a un nombre conséquent
+de données manquantes qui seront à priori difficiles à compléter.
+
+Les colonnes STARTMARKETINGDATE et ENDMARKETINGDATE sont similaires à celle présentes dans la table 'package'. 
+Cependant, dans cette table, il n'y a aucune valeur manquante pour la colonne STARTMARKETINGDATE.
+nt de type date, il y a un grand nombre de valeurs manquantes. 
+
+La colonne MARKETINGCATEGORYNAME présente des données du standard FDA. Il n'y a pas de valeur manquante et seulement 
+10 catégories différentes, la colonne sera donc numérisables facilement. 
+
+La colonne APPLICATIONNUMBER spécifie pour chaque objet le numéro de catégorie marketing associée (présente dans la 
+colonne MARKETINGCATEGORYNAME). Il y a un nombre important de valeurs manquantes. 
+
+La colonne LABELERNAME présente des données textuelles très inconsistantes réflétant donc le nombre important de valeurs
+différentes. Cette colonne parait difficilement numérisables et les valeurs manquantes (557) non complétables. 
 """
 
 # %%
-"""
-### Colonne PROPRIETARYNAME
-"""
-
-# %%
-product_data['PROPRIETARYNAME'].nunique()
-
-# %%
-# product_data['PROPRIETARYNAME'][393:401]
+print(product_data['LABELERNAME'][7253:7256])
 
 # %%
 """
-Dans cette colonne, il existe un grand nombre de valeurs différentes. Les mêmes valeurs peuvent être présentes sous 
-différentes formes notamment en minuscules ou majuscules, il existe donc une inconsistance entre les valeurs.
+
+La colonne SUBSTANCENAME présente des données du standard FDA, celui-ci est composé de 108 227 catégories différentes.
+Chaque objet peut présenter plusieurs catégories, la représentation de valeurs multiples est consistante via le 
+séparateur ';'. Cela pourrait expliquer le nombre important de valeurs différentes. Le nombre de valeurs manquantes
+est important et les valeurs seront difficilement complétables.
+
+Les colonnes ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs liées. Il existe des valeurs
+multiples et une consistance dans leur représentation via le séparateur ';'. Le nombre de valeurs manquantes est égale 
+pour les deux colonnes. Elles paraissent assez facilement numérisables mais difficilement complétables.
+
+La colonne PHARM_CLASSES présente des données du standard FDA, cependant il y en a un extrêmement important. Chaque 
+objet peut disposer de plusieurs valeurs, la représentation de multiples valeurs semblent être consistante via le 
+séparateur ','. 
+Comme précisé par la FDA, ces données sont les catégories pharmaceutiques correspondants aux substances
+du produit (valeurs contenues dans la colonne SUBSTANCENAME). On sait cependant qu'il existe un nombre assez important 
+de valeurs de noms de substances manquantes. 
+
+La colonne DEASCHEDULE présente des données du standard FDA. Ces données semblent être facilement numérisables, il y
+cependant un nombre important de données manquantes qui seront difficilement complétables car nécessite de les traiter
+un à un par un expert.
+
+La colonne NDC_EXCLUDE_FLAG présente seulement la catégorie N pour notre jeu de données, comme précisé dans la 
+documentation. Il n'y a pas de valeur manquante.
 """
 
 # %%
-"""
-### Colonne PROPRIETARYNAMESUFFIX
-"""
-
-# %%
-product_data['PROPRIETARYNAMESUFFIX'].nunique()
-
-# %%
-"""
-Dans cette colonne, il y a un nombre important de valeurs manquantes. Ces valeurs sont textuelles et il existe un nombre 
-élevé de valeurs différentes.
-"""
-
-# %%
-"""
-### Colonne NONPROPRIETARYNAME
-"""
-
-# %%
-product_data['NONPROPRIETARYNAME'].nunique()
-
-# %%
-product_data['NONPROPRIETARYNAME'][2:6]
-
-# %%
-"""
-Cette colonne présente seulement 4 valeurs manquantes. Ceux sont des données textuelles inconsistantes, par exemple 
-pouvant représenter la même valeur en caratères minuscules ou majuscules. Il y a un nombre très important de valeurs 
-différentes.
-"""
-
-# %%
-"""
-### Colonne DOSAGEFORMNAME
-"""
-
-# %%
-product_data['DOSAGEFORMNAME'].value_counts()
-
-# %%
-"""
-Cette colonne contient 134 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
-affectées au même objet. La colonne ne présente aucune valeur manquante.
-"""
-
-# %%
-"""
-### Colonne ROUTENAME
-"""
-
-# %%
-product_data['ROUTENAME'].value_counts()
-
-# %%
-"""
-Cette colonne contient 180 différentes valeurs textuelles. Comme on peut le voir, différentes catégories peuvent être 
-affectées au même objet. La colonne présente 1932 valeurs manquantes.
-"""
-
-# %%
-"""
-### Colonne STARTMARKETINGDATE
-Les valeurs sont de type date, il n'y a aucune valeur manquante. 
-"""
-
-# %%
-"""
-### Colonne ENDMARKETINGDATE
-Les valeurs sont de type date, il y a un grand nombre de valeurs manquantes. 
-"""
-
-# %%
-"""
-### Colonne MARKETINGCATEGORYNAME
-"""
-
-# %%
-product_data['MARKETINGCATEGORYNAME'].value_counts()
-# %%
-"""
-Les valeurs sont de type textuelles, il y a 26 catégories différentes et ne présente aucune valeur manquante.  
-"""
-# %%
-"""
-### Colonne APPLICATIONNUMBER
-"""
-# %%
-product_data['APPLICATIONNUMBER'].nunique()
-# %%
-"""
-Cette colonne spécifie le numéro de série de la catégorie marketing. Le nombre de valeurs manquantes est élevé, et 
-comme il y a un numéro de série pour chaque objet dans une catégorie, le nombre de valeurs différentes est également 
-important.
-"""
-
-# %%
-"""
-### Colonne LABELERNAME
-"""
-
-# %%
-product_data['LABELERNAME'].nunique()
-
-# %%
-product_data['LABELERNAME'][7291:7293]
-# %%
-"""
-La colonne présente peu de valeurs manquantes (557). Si on remarque qu'il existe un nombre important de valeurs 
-différentes, les données sont cependant inconsistantes.
-"""
-
-# %%
-"""
-### Colonne SUBSTANCENAME
-"""
-
-# %%
-product_data['SUBSTANCENAME'].nunique()
-
-# %%
-product_data['SUBSTANCENAME'][727:735]
-
-# %%
-"""
-Cette colonne présente un nombre assez important de données manquantes (2309), ceux sont des données textuelles 
-catégorielles. Or le nombre de catégories parait élevé, comme le montre le nombre de valeurs uniques. Chaque objet 
-peut cependant présenté plusieurs catégories séparées par un ';'.
-"""
-
-# %%
-"""
-### Colonne ACTIVE_NUMERATOR_STRENGTH
-"""
-
-# %%
-product_data['ACTIVE_NUMERATOR_STRENGTH'][725:731]
-
-# %%
-"""
-Ceux sont des données numériques qui paraissent dupliquées pour le même objet.  
-"""
-
-# %%
-"""
-### Colonne ACTIVE_INGRED_UNIT
-"""
-
-# %%
-product_data['ACTIVE_INGRED_UNIT'][725:731]
-
-# %%
-"""
-Ceux sont des données textuelles catégorielles qui présentent l'unité de la colonne 'ACTIVE_INGRED_UNIT'. Les données
-paraissent également dupliquées pour le même objet.
-"""
-
-# %%
-"""
-### Colonne PHARM_CLASSES
-"""
-
-# %%
-product_data['PHARM_CLASSES'].nunique()
-
-# %%
-product_data['PHARM_CLASSES'][725]
-
-# %%
-"""
-Ceux sont des données textuelles catégorielles présentant plusieurs catégories pour un même objet. Il y a un grand 
-nombre de valeurs manquantes.
-"""
-# %%
-"""
-### Colonne DEASCHEDULE
-"""
-
-# %%
-product_data['DEASCHEDULE'].value_counts()
-
-# %%
-"""
-Cette colonne présente un nombre important de données manquantes. Ceux sont des données catégorielles, présentant 
-seulement 4 catégories.
-"""
-
-# %%
-"""
-### Colonne NDC_EXCLUDE_FLAG
-"""
-
-# %%
-product_data['NDC_EXCLUDE_FLAG'].value_counts()
-
-# %%
-"""
-Cette colonne présente seulement une catégorie 'N'.
-"""
+print(product_data['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
 """
@@ -716,12 +531,14 @@ if not os.path.isdir(encoder_dir):
 if not product_encode_file_exist:
     for header in product_headers_to_encode:
         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product_data, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
+                    pickle.HIGHEST_PROTOCOL)
 
 if not package_encode_file_exist:
     for header in package_headers_to_encode:
         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package_data, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'), pickle.HIGHEST_PROTOCOL)
+        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
+                    pickle.HIGHEST_PROTOCOL)
 
 if not os.path.isdir(encoding_dir):
     os.mkdir(encoding_dir)
@@ -736,11 +553,11 @@ for header, enc in enc_dic.items():
 
 # Save transformed data to file
 if not product_encode_file_exist:
-    time_methode(product_data.to_csv, **(dict(path_or_buf= encoded_product_file,
-                                              index= False,
-                                              sep= separ,
-                                              encoding= target_encoding,
-                                              quoting= csv.QUOTE_NONNUMERIC)))
+    time_methode(product_data.to_csv, **(dict(path_or_buf=encoded_product_file,
+                                              index=False,
+                                              sep=separ,
+                                              encoding=target_encoding,
+                                              quoting=csv.QUOTE_NONNUMERIC)))
 
 if not product_encode_file_exist:
     time_methode(package_data.to_csv, **(dict(path_or_buf=encoded_package_file,
