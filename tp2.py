@@ -16,8 +16,109 @@ product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', '
                              'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
 package_headers_to_encode = ['PACKAGEUNIT', 'PACKAGETYPE']
 
+standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AEROSOL, METERED": "AEROSOL",
+                           "AEROSOL, POWDER": "AEROSOL", "AEROSOL, SPRAY": "AEROSOL", "BAR": "BAR",
+                           "BAR, CHEWABLE": "BAR", "BEAD": "BEAD", "CAPSULE": "CAPSULE", "CAPSULE, COATED": "CAPSULE",
+                           "CAPSULE, COATED PELLETS": "CAPSULE", "CAPSULE, COATED, EXTENDED RELEASE": "CAPSULE",
+                           "CAPSULE, DELAYED RELEASE": "CAPSULE", "CAPSULE, DELAYED RELEASE PELLETS": "CAPSULE",
+                           "CAPSULE, EXTENDED RELEASE": "CAPSULE", "CAPSULE, FILM COATED, EXTENDED RELEASE": "CAPSULE",
+                           "CAPSULE, GELATIN COATED": "CAPSULE", "CAPSULE, LIQUID FILLED": "CAPSULE",
+                           "CELLULAR SHEET": "CELLULAR SHEET", "CHEWABLE GEL": "CHEWABLE GEL", "CLOTH": "CLOTH",
+                           "CONCENTRATE": "CONCENTRATE", "CREAM": "CREAM", "CREAM, AUGMENTED": "CREAM",
+                           "CRYSTAL": "CRYSTAL", "DISC": "DISC", "DOUCHE": "DOUCHE", "DRESSING": "DRESSING",
+                           "ELIXIR": "ELIXIR", "EMULSION": "EMULSION", "ENEMA": "ENEMA", "EXTRACT": "EXTRACT",
+                           "FIBER, EXTENDED RELEASE": "FIBER", "FILM": "FILM", "FILM, EXTENDED RELEASE": "FILM",
+                           "FILM, SOLUBLE": "FILM", "FOR SOLUTION": "FOR SOLUTION", "FOR SUSPENSION": "FOR SUSPENSION",
+                           "FOR SUSPENSION, EXTENDED RELEASE": "FOR SUSPENSION", "GAS": "GAS", "GEL": "GEL",
+                           "GEL, DENTIFRICE": "GEL", "GEL, METERED": "GEL", "GLOBULE": "GLOBULE", "GRANULE": "GRANULE",
+                           "GRANULE, DELAYED RELEASE": "GRANULE", "GRANULE, EFFERVESCENT": "GRANULE",
+                           "GRANULE, FOR SOLUTION": "GRANULE", "GRANULE, FOR SUSPENSION": "GRANULE",
+                           "GRANULE, FOR SUSPENSION, EXTENDED RELEASE": "GRANULE", "GUM": "GUM", "GUM, CHEWING": "GUM",
+                           "IMPLANT": "IMPLANT", "INHALANT": "INHALANT", "INJECTABLE FOAM": "INJECTABLE FOAM",
+                           "INJECTABLE": "INJECTABLE", "INJECTABLE, LIPOSOMAL": "INJECTABLE", "INJECTION": "INJECTION",
+                           "INJECTION, EMULSION": "INJECTION", "INJECTION, LIPID COMPLEX": "INJECTION",
+                           "INJECTION, POWDER, FOR SOLUTION": "INJECTION",
+                           "INJECTION, POWDER, FOR SUSPENSION": "INJECTION",
+                           "INJECTION, POWDER, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
+                           "INJECTION, POWDER, LYOPHILIZED, FOR LIPOSOMAL SUSPENSION": "INJECTION",
+                           "INJECTION, POWDER, LYOPHILIZED, FOR SOLUTION": "INJECTION",
+                           "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION": "INJECTION",
+                           "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
+                           "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
+                           "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
+                           "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
+                           "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
+                           "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
+                           "IRRIGANT": "IRRIGANT", "JELLY": "JELLY", "KIT": "KIT", "LINIMENT": "LINIMENT",
+                           "LIPSTICK": "LIPSTICK", "LIQUID": "LIQUID", "LIQUID, EXTENDED RELEASE": "LIQUID",
+                           "LOTION": "LOTION", "LOTION, AUGMENTED": "LOTION", "LOTION/SHAMPOO": "LOTION/SHAMPOO",
+                           "LOZENGE": "LOZENGE", "MOUTHWASH": "MOUTHWASH", "NOT APPLICABLE": "NOT APPLICABLE",
+                           "OIL": "OIL", "OINTMENT": "OINTMENT", "OINTMENT, AUGMENTED": "OINTMENT", "PASTE": "PASTE",
+                           "PASTE, DENTIFRICE": "PASTE", "PASTILLE": "PASTILLE", "PATCH": "PATCH",
+                           "PATCH, EXTENDED RELEASE": "PATCH",
+                           "PATCH, EXTENDED RELEASE, ELECTRICALLY CONTROLLED": "PATCH", "PELLET": "PELLET",
+                           "PELLET, IMPLANTABLE": "PELLET", "PELLETS, COATED, EXTENDED RELEASE": "PELLETS",
+                           "PILL": "PILL", "PLASTER": "PLASTER", "POULTICE": "POULTICE", "POWDER": "POWDER",
+                           "POWDER, DENTIFRICE": "POWDER", "POWDER, FOR SOLUTION": "POWDER",
+                           "POWDER, FOR SUSPENSION": "POWDER", "POWDER, METERED": "POWDER", "RING": "RING",
+                           "RINSE": "RINSE", "SALVE": "SALVE", "SHAMPOO": "SHAMPOO", "SHAMPOO, SUSPENSION": "SHAMPOO",
+                           "SOAP": "SOAP", "SOLUTION": "SOLUTION", "SOLUTION, CONCENTRATE": "SOLUTION",
+                           "SOLUTION, FOR SLUSH": "SOLUTION", "SOLUTION, GEL FORMING / DROPS": "SOLUTION",
+                           "SOLUTION, GEL FORMING, EXTENDED RELEASE": "SOLUTION", "SOLUTION/ DROPS": "SOLUTION/ DROPS",
+                           "SPONGE": "SPONGE", "SPRAY": "SPRAY", "SPRAY, METERED": "SPRAY",
+                           "SPRAY, SUSPENSION": "SPRAY", "STICK": "STICK", "STRIP": "STRIP",
+                           "SUPPOSITORY": "SUPPOSITORY", "SUPPOSITORY, EXTENDED RELEASE": "SUPPOSITORY",
+                           "SUSPENSION": "SUSPENSION", "SUSPENSION, EXTENDED RELEASE": "SUSPENSION",
+                           "SUSPENSION/ DROPS": "SUSPENSION/ DROPS", "SWAB": "SWAB", "SYRUP": "SYRUP",
+                           "SYSTEM": "SYSTEM", "TABLET": "TABLET", "TABLET, CHEWABLE": "TABLET",
+                           "TABLET, CHEWABLE, EXTENDED RELEASE": "TABLET", "TABLET, COATED": "TABLET",
+                           "TABLET, COATED PARTICLES": "TABLET", "TABLET, DELAYED RELEASE": "TABLET",
+                           "TABLET, DELAYED RELEASE PARTICLES": "TABLET", "TABLET, EFFERVESCENT": "TABLET",
+                           "TABLET, EXTENDED RELEASE": "TABLET", "TABLET, FILM COATED": "TABLET",
+                           "TABLET, FILM COATED, EXTENDED RELEASE": "TABLET", "TABLET, FOR SOLUTION": "TABLET",
+                           "TABLET, FOR SUSPENSION": "TABLET", "TABLET, MULTILAYER": "TABLET",
+                           "TABLET, MULTILAYER, EXTENDED RELEASE": "TABLET", "TABLET, ORALLY DISINTEGRATING": "TABLET",
+                           "TABLET, ORALLY DISINTEGRATING, DELAYED RELEASE": "TABLET", "TABLET, SOLUBLE": "TABLET",
+                           "TABLET, SUGAR COATED": "TABLET", "TABLET WITH SENSOR": "TABLET WITH SENSOR",
+                           "TAMPON": "TAMPON", "TAPE": "TAPE", "TINCTURE": "TINCTURE", "TROCHE": "TROCHE",
+                           "WAFER": "WAFER"}
+standard_routename = ["AURICULAR (OTIC)", "BUCCAL", "CONJUNCTIVAL", "CUTANEOUS", "DENTAL", "ELECTRO-OSMOSIS",
+                      "ENDOCERVICAL", "ENDOSINUSIAL", "ENDOTRACHEAL", "ENTERAL", "EPIDURAL", "EXTRA-AMNIOTIC",
+                      "EXTRACORPOREAL", "HEMODIALYSIS", "INFILTRATION", "INTERSTITIAL", "INTRA-ABDOMINAL",
+                      "INTRA-AMNIOTIC", "INTRA-ARTERIAL", "INTRA-ARTICULAR", "INTRABILIARY", "INTRABRONCHIAL",
+                      "INTRABURSAL", "INTRACANALICULAR", "INTRACARDIAC", "INTRACARTILAGINOUS", "INTRACAUDAL",
+                      "INTRACAVERNOUS", "INTRACAVITARY", "INTRACEREBRAL", "INTRACISTERNAL", "INTRACORNEAL",
+                      "INTRACORONAL, DENTAL", "INTRACORONARY", "INTRACORPORUS CAVERNOSUM", "INTRACRANIAL",
+                      "INTRADERMAL", "INTRADISCAL", "INTRADUCTAL", "INTRADUODENAL", "INTRADURAL", "INTRAEPICARDIAL",
+                      "INTRAEPIDERMAL", "INTRAESOPHAGEAL", "INTRAGASTRIC", "INTRAGINGIVAL", "INTRAHEPATIC",
+                      "INTRAILEAL", "INTRALESIONAL", "INTRALINGUAL", "INTRALUMINAL", "INTRALYMPHATIC", "INTRAMAMMARY",
+                      "INTRAMEDULLARY", "INTRAMENINGEAL", "INTRAMUSCULAR", "INTRANODAL", "INTRAOCULAR", "INTRAOMENTUM",
+                      "INTRAOVARIAN", "INTRAPERICARDIAL", "INTRAPERITONEAL", "INTRAPLEURAL", "INTRAPROSTATIC",
+                      "INTRAPULMONARY", "INTRARUMINAL", "INTRASINAL", "INTRASPINAL", "INTRASYNOVIAL", "INTRATENDINOUS",
+                      "INTRATESTICULAR", "INTRATHECAL", "INTRATHORACIC", "INTRATUBULAR", "INTRATUMOR", "INTRATYMPANIC",
+                      "INTRAUTERINE", "INTRAVASCULAR", "INTRAVENOUS", "INTRAVENTRICULAR", "INTRAVESICAL",
+                      "INTRAVITREAL", "IONTOPHORESIS", "IRRIGATION", "LARYNGEAL", "NASAL", "NASOGASTRIC",
+                      "NOT APPLICABLE", "OCCLUSIVE DRESSING TECHNIQUE", "OPHTHALMIC", "ORAL", "OROPHARYNGEAL",
+                      "PARENTERAL", "PERCUTANEOUS", "PERIARTICULAR", "PERIDURAL", "PERINEURAL", "PERIODONTAL", "RECTAL",
+                      "RESPIRATORY (INHALATION)", "RETROBULBAR", "SOFT TISSUE", "SUBARACHNOID", "SUBCONJUNCTIVAL",
+                      "SUBCUTANEOUS", "SUBGINGIVAL", "SUBLINGUAL", "SUBMUCOSAL", "SUBRETINAL", "TOPICAL", "TRANSDERMAL",
+                      "TRANSENDOCARDIAL", "TRANSMUCOSAL", "TRANSPLACENTAL", "TRANSTRACHEAL", "TRANSTYMPANIC",
+                      "URETERAL", "URETHRAL", "VAGINAL"]
+standard_marketingcategoryname = ["ANADA", "ANDA", "Approved Drug Product Manufactured Under Contract", "BLA",
+                                  "Bulk ingredient", "Bulk Ingredient For Animal Drug Compounding",
+                                  "Bulk Ingredient For Human Prescription Compounding", "Conditional NADA", "Cosmetic",
+                                  "Dietary Supplement", "Drug for Further Processing", "Exempt device", "Export only",
+                                  "Humanitarian Device Exemption", "IND", "Medical Food",
+                                  "Legally Marketed Unapproved New Animal Drugs for Minor Species", "NADA", "NDA",
+                                  "NDA authorized generic", "OTC Monograph Drug Product Manufactured Under Contract",
+                                  "OTC monograph final", "OTC monograph not final", "Premarket Application",
+                                  "Premarket Notification", "Unapproved drug for use in drug shortage",
+                                  "Unapproved drug other", "Unapproved Drug Product Manufactured Under Contract",
+                                  "Unapproved homeopathic", "Unapproved medical gas"]
+standard_deaschedule = ["CI", "CII", "CIII", "CIV", "CV"]
+standard_ndcexcludeflag = ["N"]
+
 target_encoding = 'utf-8'
-# separ = '\t'
 separ = '|'
 custom_sep = ' ?[|,;:<>] ?|^ | $'
 
@@ -194,36 +295,32 @@ original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 
 if product_encode_file_exist:
     print('Loading encoded product data from existing file...')
-    product_data = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
+    product = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
     # Populate onehot encoders dictionnary
     for header in product_headers_to_encode:
         enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
-    product_data = original_product_data
+    product = original_product_data
 
 if package_encode_file_exist:
     print('Loading encoded package data from existing file...')
-    package_data = pd.read_csv(encoded_package_file, sep=separ, encoding=target_encoding)
+    package = pd.read_csv(encoded_package_file, sep=separ, encoding=target_encoding)
 
     # Populate onehot encoders dictionnary
     for header in package_headers_to_encode:
         enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
-    package_data = original_package_data
+    package = original_package_data
 
 # Make everything lower characters in both tables
-df_to_lower(product_data)
-df_to_lower(package_data)
+df_to_lower(product)
+df_to_lower(package)
 
 if product_encode_file_exist:
     print('Get unique values for ROUTENAME column of PRODUCT table')
     product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
     print(product_unique_values)
     print(enc_dic['ROUTENAME'].categories_[0])
-
-# drop useless index columns
-product_data = product_data.drop(product_data.columns[0], axis=1)
-package_data = package_data.drop(package_data.columns[0], axis=1)
 
 # %%
 """
@@ -236,13 +333,15 @@ entre les valeurs.
 
 # %%
 print('Assessing completeness of packaging data table')
-assert_table_completeness(package_data)
+assert_table_completeness(package)
 
 # %%
 """
-La colonne PRODUCTID présente des valeurs manquantes, qui paraissent bloquantes. Les valeurs manquantes des colonnes 
-STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non bloquantes. Ces deux dernières 
-colonnes sont de type date et les valeurs de STARTMARKETINGDATE ont l'air séquentielles.
+La colonne PRODUCTID ne présente pas de valeurs manquantes. Celle-ci fournit les valeurs concaténées de 
+code produit NDC et de l'identifiant SPL. Cependant, la colonne PRODUCTNDC présente quant à elle 1500 valeurs manquantes
+. 
+Les valeurs manquantes des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non 
+bloquantes. Ces deux dernières colonnes sont de type date.
 
 La colonne PACKAGEDESCRIPTION est présentée sous forme de phrase et contient de multiples informations: le type de 
 volume, sa valeur et son unité. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur 
@@ -258,7 +357,15 @@ traitables numériquement.
 
 # %%
 print('Assessing completeness product data table')
-assert_table_completeness(product_data)
+assert_table_completeness(product)
+
+# %%
+"""
+On remarque que la colonne PRODUCTID présente 1560 valeurs manquantes. La colonne PRODUCTNDC quant à elle présente 
+certaines valeurs aberrantes.
+"""
+# %%
+print(product['PRODUCTNDC'][159:161])
 
 # %%
 """
@@ -299,7 +406,7 @@ différentes. Cette colonne parait difficilement numérisables et les valeurs ma
 """
 
 # %%
-print(product_data['LABELERNAME'][7252:7255])
+print(product['LABELERNAME'][7252:7255])
 
 # %%
 """
@@ -329,7 +436,7 @@ documentation. Il n'y a pas de valeur manquante.
 """
 
 # %%
-print(product_data['NDC_EXCLUDE_FLAG'].value_counts())
+print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
 """
@@ -375,9 +482,10 @@ On se rend compte de l'existence de données aberrantes que l'on décide d'ignor
 
 # %%
 # conversion to datetime format
+# TODO: fix AttributeError: 'NoneType' object has no attribute '__name__'
 def date_convert(dc):
     for c in dc:
-        product_data[c] = pd.to_datetime(product_data[c], errors='coerce', format='%Y%m%d')
+        product[c] = pd.to_datetime(product[c], errors='coerce', format='%Y%m%d')
 
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
@@ -391,7 +499,7 @@ mise sur le marché.
 
 # %%
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-nb = product_data[product_data['STARTMARKETINGDATE'] > product_data['ENDMARKETINGDATE']].shape[0]
+nb = product[product['STARTMARKETINGDATE'] > product['ENDMARKETINGDATE']].shape[0]
 print(f"Nombre d'incohérences entre STARTMARKETINGDATE et ENDMARKETINGDATE: {nb}")
 
 # %%
@@ -402,7 +510,7 @@ colonne est passée.
 """
 # %%
 
-product_data = product_data.drop(product_data[product_data['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
+product = product.drop(product[product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
 
 # %%
 """
@@ -411,7 +519,7 @@ précise la documentation FDA. On le vérifie simplement:
 """
 # %%
 
-print(product_data['NDC_EXCLUDE_FLAG'].value_counts())
+print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
 """
@@ -421,12 +529,46 @@ chacune des colonnes doit donc être égal.
 
 # %%
 
-comp = product_data['ACTIVE_NUMERATOR_STRENGTH'].str.count(';').fillna(0) == \
-       product_data['ACTIVE_INGRED_UNIT'].str.count(';').fillna(0)
-product_data[np.logical_not(comp)][['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']]
+comp = product['ACTIVE_NUMERATOR_STRENGTH'].str.count(';').fillna(0) == \
+       product['ACTIVE_INGRED_UNIT'].str.count(';').fillna(0)
+nb = len(product[np.logical_not(comp)][['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']])
+print(f'Nombre d\'incohérences entre ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT: {nb}')
 
 # %%
-# TODO: productndc et check categories
+"""
+La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
+partie de la valeur du PRODUCTID associée. En effet, celui-ci étant un duplicata, celui-ci peut être considéré comme 
+correct.
+"""
+
+# %%
+outliers = product['PRODUCTNDC'][~product['PRODUCTNDC'].str.contains(r'\d{4,5}-\d{3,4}', regex=True)]
+id_outliers = product.iloc[outliers.index.values.tolist()]['PRODUCTID']
+for (io, i) in zip(id_outliers, outliers.index.values.tolist()):
+    product.at[i, 'PRODUCTNDC'] = re.match('(^[^_]+)', io).group(0)
+
+# %%
+"""
+Certaines colonnes représentent des standards FDA, afin d'assurer aucune incohérence dans leurs valeurs, 
+nous décidons de vérifier que leurs valeurs sont incluses dans les standards fournis par la FDA (disponible 
+https://www.fda.gov/industry/fda-resources-data-standards/structured-product-labeling-resources). 
+On s'intéressera donc aux colonnes: DOSAGEFORMNAME, ROUTENAME, MARKETINGCATEGORYNAME, DEASCHEDULE, NDC_EXCLUDE_FLAG 
+Les colonnes SUBSTANCENAME et PHARM_CLASSES représentent également des standards FDA, cependant, le nombre de valeurs
+possibles fournis par la FDA est extrêment important. Nous décidons, par mesure de possibilité, ne pas les traiter.
+"""
+
+
+# %%
+
+
+def check_categories(table, column_name, standard):
+    categories = pd.Series(table[column_name].unique()).dropna()
+    lowercase_standard = map(str.lower, pd.Series(standard))
+    return categories.isin(lowercase_standard).any().any()
+
+
+# %%
+check_categories(product, 'DEASCHEDULE', standard_deaschedule)
 # %%
 """
 ## Table 'package'
@@ -441,18 +583,18 @@ On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
 
 if not package_encode_file_exist:
     # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
-    package_data['PACKAGEDESCRIPTION'] = package_data['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
-                                                                                    value='', regex=True)
+    package['PACKAGEDESCRIPTION'] = package['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
+                                                                          value='', regex=True)
 
     # split info into multiple columns
     search = {0: [], 1: [], 2: []}
-    for values in package_data['PACKAGEDESCRIPTION']:
+    for values in package['PACKAGEDESCRIPTION']:
         s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
         for i in range(3):
             search[i].append(s.group(i + 1))
 
     for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
-        package_data[n] = search[i]
+        package[n] = search[i]
 
 # %%
 """
@@ -465,12 +607,12 @@ if not package_encode_file_exist:
     # conversion to datetime format
     date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
     for c in date_cols:
-        package_data[c] = pd.to_datetime(package_data[c], errors='coerce', format='%Y%m%d')
+        package[c] = pd.to_datetime(package[c], errors='coerce', format='%Y%m%d')
 
     # compare STARTMARKETINGDATE and ENDMARKETINGDATE
     # replace ENDMARKETINGDATE to NaT when incoherence
-    package_data.loc[
-        (package_data['STARTMARKETINGDATE'] > package_data['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
+    package.loc[
+        (package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
 
 # %%
 """
@@ -481,23 +623,23 @@ On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC,
 
 # %%
 if not package_encode_file_exist:
-    package_missing_ndcpackagecode = package_data.iloc[np.where(pd.isnull(package_data['NDCPACKAGECODE']))]
+    package_missing_ndcpackagecode = package.iloc[np.where(pd.isnull(package['NDCPACKAGECODE']))]
     values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
     for index, row in values.iterrows():
-        package_data.loc[index, 'NDCPACKAGECODE'] = row[0]
+        package.loc[index, 'NDCPACKAGECODE'] = row[0]
 
 # %%
 if not package_encode_file_exist:
-    package_missing_productndc = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTNDC']))]
+    package_missing_productndc = package.iloc[np.where(pd.isnull(package['PRODUCTNDC']))]
     values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
     for index, row in values.iterrows():
-        package_data.loc[index, 'PRODUCTNDC'] = row[0]
+        package.loc[index, 'PRODUCTNDC'] = row[0]
 
 # %%
 
 if not package_encode_file_exist:
     # TODO : find a way to retrieve PRODUCTID from 'product' table
-    package_missing_ndcproductid = package_data.iloc[np.where(pd.isnull(package_data['PRODUCTID']))]
+    package_missing_ndcproductid = package.iloc[np.where(pd.isnull(package['PRODUCTID']))]
 
 # %%
 """
@@ -514,10 +656,6 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 """
 # 5. Duplications données
 """
-
-# %%
-
-# TODO: drop column PACKAGEDESCRIPTION
 
 # %%
 """
@@ -553,13 +691,13 @@ if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
 if not product_encode_file_exist:
     for header in product_headers_to_encode:
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product_data, header=header)))
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product, header=header)))
         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
                     pickle.HIGHEST_PROTOCOL)
 
 if not package_encode_file_exist:
     for header in package_headers_to_encode:
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package_data, header=header)))
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
                     pickle.HIGHEST_PROTOCOL)
 
@@ -576,18 +714,18 @@ for header, enc in enc_dic.items():
 
 # Save transformed data to file
 if not product_encode_file_exist:
-    time_methode(product_data.to_csv, **(dict(path_or_buf=encoded_product_file,
-                                              index=False,
-                                              sep=separ,
-                                              encoding=target_encoding,
-                                              quoting=csv.QUOTE_NONNUMERIC)))
+    time_methode(product.to_csv, **(dict(path_or_buf=encoded_product_file,
+                                         index=False,
+                                         sep=separ,
+                                         encoding=target_encoding,
+                                         quoting=csv.QUOTE_NONNUMERIC)))
 
 if not product_encode_file_exist:
-    time_methode(package_data.to_csv, **(dict(path_or_buf=encoded_package_file,
-                                              index=False,
-                                              sep=separ,
-                                              encoding=target_encoding,
-                                              quoting=csv.QUOTE_NONNUMERIC)))
+    time_methode(package.to_csv, **(dict(path_or_buf=encoded_package_file,
+                                         index=False,
+                                         sep=separ,
+                                         encoding=target_encoding,
+                                         quoting=csv.QUOTE_NONNUMERIC)))
 
 # %%
 """
@@ -596,10 +734,10 @@ if not product_encode_file_exist:
 
 # %%
 print('Encoded product data:')
-print(product_data)
-product_data
+print(product)
+product
 
 # %%
 print('Encoded packaging data:')
-print(package_data)
-package_data
+print(package)
+package
