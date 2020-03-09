@@ -560,15 +560,28 @@ possibles fournis par la FDA est extrêment important. Nous décidons, par mesur
 
 # %%
 
-
 def check_categories(table, column_name, standard):
     categories = pd.Series(table[column_name].unique()).dropna()
     lowercase_standard = map(str.lower, pd.Series(standard))
     return categories.isin(lowercase_standard).any().any()
 
 
+def check_dict_categories(table, column_name, standard):
+    categories = pd.Series(table[column_name].unique()).dropna()
+    lowercase_standard = dict((k.lower(), v.lower()) for k, v in standard.items())
+    return categories.isin(list(lowercase_standard.values())).any().any()
+
+
 # %%
-check_categories(product, 'DEASCHEDULE', standard_deaschedule)
+cols = ['DEASCHEDULE', 'NDC_EXCLUDE_FLAG', 'ROUTENAME', 'MARKETINGCATEGORYNAME']
+standards = [standard_deaschedule, standard_ndcexcludeflag, standard_routename, standard_marketingcategoryname]
+for (col_name, stand) in zip(cols, standards):
+    check = check_categories(product, col_name, stand)
+    print(f'Toutes les valeurs de la colonne {col_name} correspondent au stardard FDA: {check}')
+
+check = check_dict_categories(product, 'DOSAGEFORMNAME', standard_dosageformname)
+print(f'Toutes les valeurs de la colonne DOSAGEFORMNAME correspondent au stardard FDA: {check}')
+
 # %%
 """
 ## Table 'package'
