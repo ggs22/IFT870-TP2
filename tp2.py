@@ -417,9 +417,10 @@ Chaque objet peut présenter plusieurs catégories, la représentation de valeur
 séparateur ';'. Cela pourrait expliquer le nombre important de valeurs différentes. Le nombre de valeurs manquantes
 est important et les valeurs seront difficilement complétables.
 
-Les colonnes ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs liées. Il existe des valeurs
-multiples et une consistance dans leur représentation via le séparateur ';'. Le nombre de valeurs manquantes est égale 
-pour les deux colonnes. Elles paraissent assez facilement numérisables mais difficilement complétables.
+Les colonnes ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs liées à la substance. 
+Il existe des valeurs multiples et une consistance dans leur représentation via le séparateur ';'. 
+Le nombre de valeurs manquantes est égal pour les deux colonnes. Elles paraissent assez facilement numérisables mais 
+difficilement complétables.
 
 La colonne PHARM_CLASSES présente des données du standard FDA, cependant il y en a un extrêmement important. Chaque 
 objet peut disposer de plusieurs valeurs, la représentation de multiples valeurs semblent être consistante via le 
@@ -524,17 +525,18 @@ print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
 """
-Les colonnes ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs multiples liées. Leur nombre dans
-chacune des colonnes doit donc être égal. 
+Les colonnes SUBSTANCENAME, ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs multiples liées. Leur
+nombre dans chacune des colonnes doit donc être égal. 
+On les vérifie deux à deux.
 """
 
 # %%
-
-comp = product['ACTIVE_NUMERATOR_STRENGTH'].str.count(';').fillna(0) == \
-       product['ACTIVE_INGRED_UNIT'].str.count(';').fillna(0)
-nb = len(product[np.logical_not(comp)][['ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']])
-print(f'Nombre d\'incohérences entre ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT: {nb}')
-
+values_count = lambda row, col: len(re.sub(r"(\().*?;?.*?(\))", '', row[col]).split(';')) if isinstance(row[col],
+                                                                                                        str) else 0
+check = lambda row: values_count(row, "SUBSTANCENAME") == values_count(row, "ACTIVE_NUMERATOR_STRENGTH") \
+                    == values_count(row, "ACTIVE_INGRED_UNIT")
+nb_valid = len(product.apply(check, axis=1))
+print(f"Nombre d'incohérences entre ces 3 colonnes: {product.shape[0] - nb_valid}")
 # %%
 """
 La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
