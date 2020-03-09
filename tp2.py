@@ -585,48 +585,34 @@ print(f'Toutes les valeurs de la colonne DOSAGEFORMNAME correspondent au stardar
 # %%
 """
 ## Table 'package'
-La colonne 'PACKAGEDESCRIPTION' contient beaucoup trop d'informations pour être exploitable. Tout d'abord, on garde 
-seulement l'information du package le plus informatif (le dernier) car spécifie le volume le plus précis.
-On supprime l'information dupliquée du 'NDCPACKAGECODE'. 
-Enfin, on crée une colonne pour chaque information: 'PACKAGESIZE', 'PACKAGEUNIT' et 'PACKAGETYPE'.
-On peut retirer la colonne 'PACKAGEDESCRIPTION' de la table.
+
+Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à la table 'product'.
 """
+
 
 # %%
 
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
 if not package_encode_file_exist:
-    # keep only most informative packaging and remove duplicate info NDCPACKAGECODE
-    package['PACKAGEDESCRIPTION'] = package['PACKAGEDESCRIPTION'].replace(to_replace=r'.*(\>|\*\ ) |\(.*',
-                                                                          value='', regex=True)
+    time_methode(date_convert(date_cols))
 
-    # split info into multiple columns
-    search = {0: [], 1: [], 2: []}
-    for values in package['PACKAGEDESCRIPTION']:
-        s = re.search(r'(^\.?[0-9\.]+)\ (.*)\ in\ 1\ (.*)', values)
-        for i in range(3):
-            search[i].append(s.group(i + 1))
-
-    for i, n in enumerate(['PACKAGESIZE', 'PACKAGEUNIT', 'PACKAGETYPE']):
-        package[n] = search[i]
+# compare STARTMARKETINGDATE and ENDMARKETINGDATE
+nb = product[product['STARTMARKETINGDATE'] > product['ENDMARKETINGDATE']].shape[0]
+print(f"Nombre d'incohérences entre STARTMARKETINGDATE et ENDMARKETINGDATE: {nb}")
 
 # %%
 """
-Traitement des colonnes 'STARTMARKETINGDATE', 'ENDMARKETINGDATE' similairement à la table 'product'.
+La colonne NDC_EXCLUDE_FLAG représente un stardard FDA que l'on vérifie comme pour la table 'product'.
 """
+# %%
+cols = ['NDC_EXCLUDE_FLAG']
+standards = [standard_ndcexcludeflag]
+for (col_name, stand) in zip(cols, standards):
+    check = check_categories(product, col_name, stand)
+    print(f'Toutes les valeurs de la colonne {col_name} correspondent au stardard FDA: {check}')
 
 # %%
-
-if not package_encode_file_exist:
-    # conversion to datetime format
-    date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-    for c in date_cols:
-        package[c] = pd.to_datetime(package[c], errors='coerce', format='%Y%m%d')
-
-    # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-    # replace ENDMARKETINGDATE to NaT when incoherence
-    package.loc[
-        (package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']), 'ENDMARKETINGDATE'] = pd.NaT
-
+# TODO: vérifier structures des colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE
 # %%
 """
 # 4. Données manquantes
