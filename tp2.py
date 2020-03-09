@@ -14,7 +14,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME',
                              'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
-package_headers_to_encode = ['PACKAGEUNIT', 'PACKAGETYPE']
+package_headers_to_encode = ['PACKAGEDESCRIPTION']
 
 standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AEROSOL, METERED": "AEROSOL",
                            "AEROSOL, POWDER": "AEROSOL", "AEROSOL, SPRAY": "AEROSOL", "BAR": "BAR",
@@ -46,6 +46,8 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
+
+
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
                            "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
@@ -133,7 +135,6 @@ encoded_package_file = 'transformed_package_data.csv'
 
 product_encode_file_exist = False
 package_encode_file_exist = False
-
 
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
@@ -306,9 +307,9 @@ if package_encode_file_exist:
     print('Loading encoded package data from existing file...')
     package = pd.read_csv(encoded_package_file, sep=separ, encoding=target_encoding)
 
-    # Populate onehot encoders dictionnary
-    for header in package_headers_to_encode:
-        enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
+    # # Populate onehot encoders dictionnary
+    # for header in package_headers_to_encode:
+    #     enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
     package = original_package_data
 
@@ -648,7 +649,7 @@ Les colonnes PRODUCTID, PRODUCTNDC et NDCPACKAGECODE suivent un format sp√©cifi√
 # %%
 cols = ['PRODUCTNDC', 'PRODUCTID', 'NDCPACKAGECODE']
 reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{2}']
-check_format_standard(product, cols, reg)
+check_format_standard(package, cols, reg)
 
 # %%
 """
@@ -731,14 +732,14 @@ if not product_encode_file_exist:
         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
                     pickle.HIGHEST_PROTOCOL)
 
-if not package_encode_file_exist:
-    for header in package_headers_to_encode:
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-                    pickle.HIGHEST_PROTOCOL)
+# if not package_encode_file_exist:
+#     for header in package_headers_to_encode:
+#         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
+#         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
+#                     pickle.HIGHEST_PROTOCOL)
 
 if not os.path.isdir(encoding_dir):
-    os.mkdir(encoding_dir)
+    {os.mkdir(encoding_dir)}
 # Prints out encding of each category for a given column in a txt file
 for header, enc in enc_dic.items():
     file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
