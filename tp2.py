@@ -490,7 +490,7 @@ def date_convert(dc):
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 if not product_encode_file_exist:
-    time_methode(date_convert(date_cols))
+    time_methode(date_convert, **dict(dc=date_cols))
 # %%
 """
 Aussi, il existerait une incohérence si la date de fin de mise sur le marché est moins récente que la date de début de 
@@ -594,7 +594,7 @@ Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à 
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
 if not package_encode_file_exist:
-    time_methode(date_convert(date_cols))
+    time_methode(date_convert, **dict(dc=date_cols))
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 nb = product[product['STARTMARKETINGDATE'] > product['ENDMARKETINGDATE']].shape[0]
