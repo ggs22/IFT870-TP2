@@ -339,7 +339,8 @@ assert_table_completeness(package)
 """
 La colonne PRODUCTID ne présente pas de valeurs manquantes. Celle-ci fournit les valeurs concaténées de 
 code produit NDC et de l'identifiant SPL. Cependant, la colonne PRODUCTNDC présente quant à elle 1500 valeurs manquantes
-. 
+. On remarque également des valeurs aberrantes dans ses valeurs.
+
 Les valeurs manquantes des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non 
 bloquantes. Ces deux dernières colonnes sont de type date.
 
@@ -541,12 +542,18 @@ partie de la valeur du PRODUCTID associée. En effet, celui-ci étant un duplica
 correct.
 """
 
-# %%
-outliers = product['PRODUCTNDC'][~product['PRODUCTNDC'].str.contains(r'\d{4,5}-\d{3,4}', regex=True)]
-id_outliers = product.iloc[outliers.index.values.tolist()]['PRODUCTID']
-for (io, i) in zip(id_outliers, outliers.index.values.tolist()):
-    product.at[i, 'PRODUCTNDC'] = re.match('(^[^_]+)', io).group(0)
 
+# %%
+
+
+def replace_outliers_productndc(table):
+    outliers = table['PRODUCTNDC'][~table['PRODUCTNDC'].str.contains(r'\d{4,5}-\d{3,4}', regex=True, na=False)]
+    id_outliers = table.iloc[outliers.index.values.tolist()]['PRODUCTID']
+    for (io, i) in zip(id_outliers, outliers.index.values.tolist()):
+        table.at[i, 'PRODUCTNDC'] = re.match('(^[^_]+)', io).group(0)
+
+
+replace_outliers_productndc(product)
 # %%
 """
 Certaines colonnes représentent des standards FDA, afin d'assurer aucune incohérence dans leurs valeurs, 
@@ -582,13 +589,22 @@ for (col_name, stand) in zip(cols, standards):
 check = check_dict_categories(product, 'DOSAGEFORMNAME', standard_dosageformname)
 print(f'Toutes les valeurs de la colonne DOSAGEFORMNAME correspondent au stardard FDA: {check}')
 
+
+# %%
+
+def check_format_standard(table, cols, reg):
+    for (c, r) in zip(cols, reg):
+        check = table[c].str.contains(r, regex=True, na=False).any().any()
+        print(f'La colonne {c} répond à la standardisation: {check}')
+
+
+check_format_standard(product, ['PRODUCTNDC', 'PRODUCTID'], [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+'])
 # %%
 """
 ## Table 'package'
 
 Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à la table 'product'.
 """
-
 
 # %%
 
@@ -612,12 +628,33 @@ for (col_name, stand) in zip(cols, standards):
     print(f'Toutes les valeurs de la colonne {col_name} correspondent au stardard FDA: {check}')
 
 # %%
-# TODO: vérifier structures des colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE
+"""
+La colonne PRODUCTNDC présente également des données aberrantes du même type que l'on avait trouvé dans la table product
+.
+"""
+
+# %%
+
+replace_outliers_productndc(package)
+
+# %%
+"""
+Les colonnes PRODUCTID, PRODUCTNDC et NDCPACKAGECODE suivent un format spécifié :
+- PRODUCTNDC doit répondre à une structure de digits telle que {3-5}, {3-4}, {4-4}, {4-5}.
+- PRODUCTID concatène la valeur du PRODUCTNDC et un identifiant SPL séparé par un '_'.
+- NDCPACKAGECODE concatène la valeur du PRODUCTNDC et un code segment de 2 digits séparé par '-'.
+
+"""
+# %%
+cols = ['PRODUCTNDC', 'PRODUCTID', 'NDCPACKAGECODE']
+reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{2}']
+check_format_standard(product, cols, reg)
+
 # %%
 """
 # 4. Données manquantes
 ## Table 'package'
-On s'intéresse aux données manquantes dans les colonnes PRODUCTID, PRODUCTNDC, NDCPACKAGECODE.
+On s'intéresse aux données manquantes dans les colonnes PRODUCTNDC et NDCPACKAGECODE.
 """
 
 # %%
