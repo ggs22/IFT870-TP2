@@ -47,7 +47,6 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
 
-
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
                            "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
@@ -135,6 +134,7 @@ encoded_package_file = 'transformed_package_data.csv'
 
 product_encode_file_exist = False
 package_encode_file_exist = False
+
 
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
@@ -602,8 +602,8 @@ print(f'Toutes les valeurs de la colonne DOSAGEFORMNAME correspondent au stardar
 
 def check_format_standard(table, cols, reg):
     for (c, r) in zip(cols, reg):
-        check = table[c].str.contains(r, regex=True, na=False).any().any()
-        print(f'La colonne {c} répond à la standardisation: {check}')
+        check = table[c].str.contains(r, regex=True, na=False).sum() == table.shape[0]
+        print(f'La colonne {c} répond au format de la standardisation: {check}')
 
 
 check_format_standard(product, ['PRODUCTNDC', 'PRODUCTID'], [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+'])
@@ -618,7 +618,8 @@ Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à 
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
 if not package_encode_file_exist:
-    time_methode(date_convert, **dict(dc=date_cols))
+    # time_methode(date_convert, **dict(dc=date_cols))
+    date_convert(package, date_cols)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 nb = package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']].shape[0]
@@ -665,8 +666,30 @@ Les colonnes PRODUCTID, PRODUCTNDC et NDCPACKAGECODE suivent un format spécifi�
 """
 # %%
 cols = ['PRODUCTNDC', 'PRODUCTID', 'NDCPACKAGECODE']
-reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{2}']
+reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{1,2}']
 check_format_standard(package, cols, reg)
+
+# %%
+"""
+On remarque que les valeurs de la colonne NDCPACKAGECODE ne répondent pas toutes au format de la standardisation.
+"""
+# %%
+
+val_bad_formatting = package[~package['NDCPACKAGECODE'].str.contains(r'\d{4,5}-\d{3,4}-\d{1,2}', regex=True, na=False)]
+val_bad_formatting['NDCPACKAGECODE']
+
+# %%
+"""
+On remarque effectivement que certaines valeurs sont incorrectes et ne correspondent pas à des code package. On sait que
+l'attribut PACKAGEDESCRIPTION contient, pour le premier contenant, la valeur du code package. On va pouvoir le récupérer
+de cette manière.
+"""
+
+# %%
+
+correct_val = val_bad_formatting['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+for (i, v) in correct_val.iterrows():
+    package.at[i, 'NDCPACKAGECODE'] = v[0]
 
 # %%
 """
@@ -723,19 +746,93 @@ for (v, i) in zip(values, missing_val.index.values.tolist()):
     product.at[i, 'PRODUCTID'] = v
 
 # %%
-assert_table_completeness(product)
+assert_table_completeness(package)
 
 # %%
 """
 # 5. Duplicata des objets
-On s'intéresse à la colonne PRODUCTID afin de déterminer les duplicata.
+## Table package
+On s'intéresse à la colonne NDCPACKAGECODE afin de déterminer les duplicata. En effet plusieurs packages peuvent être 
+associés à un produit (PRODUCTID), cependant les code package doivent être uniques. 
 """
 
 # %%
-product.drop_duplicates()
+
+package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)]
 
 # %%
-package.drop_duplicates()
+"""
+Celle-ci montre que nous avons 2 objets présentant un duplicata de code package. On les étudie deux à deux.
+### Premier duplicata
+"""
+# %%
+# NaN values are set to 0 to not compromise test
+print(package_duplicated.fillna(0).iloc[0] == package_duplicated.fillna(0).iloc[1])
+
+# %%
+"""
+On remarque que seules les valeurs de PRODUCTID sont différentes entre elles.
+On confirme que ces deux valeurs de PRODUCTID sont également présentes dans la table product.
+"""
+
+# %%
+d = product.loc[product['PRODUCTID'].isin(package_duplicated.iloc[0:2]['PRODUCTID'])]
+print(d.fillna(0).iloc[0] == d.fillna(0).iloc[1])
+
+# %%
+"""
+Dans la table product, ces deux objets sont également différentes que pour l'attribut PRODUCTID.
+On choisit donc d'éliminer un des duplicata dans les deux tables (le premier par simplicité).
+"""
+
+# %%
+
+product = product.drop(d.index[1])
+package = package.drop(package_duplicated.index[1])
+
+# %%
+"""
+### Deuxième duplicata
+"""
+# %%
+
+print(package_duplicated.fillna(0).iloc[2] == package_duplicated.fillna(0).iloc[3])
+print(package_duplicated.iloc[2:4]['STARTMARKETINGDATE'])
+
+# %%
+"""
+On remarque que ces objets présentant des NDCPACKAGECODE dupliqués ont des valeurs de STARTMARKETINGDATE divergent.
+On décide de comparer avec les objets correspondants dans la table product.
+"""
+
+# %%
+
+d = product.loc[product['PRODUCTID'].isin(package_duplicated.iloc[2:3]['PRODUCTID'])]
+print(d['STARTMARKETINGDATE'])
+
+# %%
+"""
+La valeur de STARTMARKETINGDATE confirme un des objets dupliqués dans package. On décide alors d'éliminer l'objet 
+présentant une valeur différente de STARTMARKETINGDATE dans package.
+"""
+
+# %%
+
+package = package.drop(package_duplicated.index[3])
+
+# %%
+d = package[package.duplicated(['NDCPACKAGECODE'], keep=False)]
+print(f'Nombre d\'objets dupliqués dans package par rapport à NDCPACKAGECODE: {len(d)} ')
+
+# %%
+"""
+## Table product
+Pour la table product, on s'intéresse aux duplicata de l'attribut PRODUCTID qui devrait être unique.
+"""
+
+# %%
+d = product[product.duplicated(['PRODUCTID'], keep=False)]
+print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(d)}')
 
 # %%
 """
