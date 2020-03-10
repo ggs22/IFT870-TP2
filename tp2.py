@@ -16,6 +16,8 @@ product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', '
                              'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
 package_headers_to_encode = ['PACKAGEDESCRIPTION']
 
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+
 standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AEROSOL, METERED": "AEROSOL",
                            "AEROSOL, POWDER": "AEROSOL", "AEROSOL, SPRAY": "AEROSOL", "BAR": "BAR",
                            "BAR, CHEWABLE": "BAR", "BEAD": "BEAD", "CAPSULE": "CAPSULE", "CAPSULE, COATED": "CAPSULE",
@@ -46,6 +48,7 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
+
 
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
@@ -134,7 +137,6 @@ encoded_package_file = 'transformed_package_data.csv'
 
 product_encode_file_exist = False
 package_encode_file_exist = False
-
 
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
@@ -278,6 +280,14 @@ def progress(count, total, status=''):
     print('\r', end='', flush=True)
     print(_str, end='', flush=True)
 
+def date_convert(table, dc):
+    for c in dc:
+        table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
+
+def date_convert_back(table, dc):
+    for c in dc:
+        for index, _ in table[c].items():
+            table[c][index] = pd.Timestamp(table[c][index])
 
 """
 Load data:
@@ -297,6 +307,11 @@ original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
 if product_encode_file_exist:
     print('Loading encoded product data from existing file...')
     product = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
+
+    # # Convert back date from string to timestamp
+    # TODO date conversion cause conflict when loading back data
+    # time_methode(date_convert_back, **dict(table=product, dc=date_cols))
+
     # Populate onehot encoders dictionnary
     for header in product_headers_to_encode:
         enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
@@ -491,10 +506,10 @@ def date_convert(table, dc):
 
 
 # %%
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-if not product_encode_file_exist:
-    # time_methode(date_convert(product, date_cols))
-    date_convert(product, date_cols)
+# TODO date conversion cause conflict when loading back data
+# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+# if not product_encode_file_exist:
+#     date_convert(product, date_cols)
 
 # %%
 """
@@ -511,11 +526,12 @@ print(f"Nombre d'incohérences entre STARTMARKETINGDATE et ENDMARKETINGDATE: {nb
 """
 La colonne LISTING_RECORD_CERTIFIED_THROUGH permet de savoir si la certification du produit est expiré. On considère 
 donc que le produit n'est plus à jour (et donc à supprimer de notre dataset) si la date précisée dans cette 
-colonne est passée. 
+colonne est passée. En l'occurence, il n'y a uncun produit dont la date d'échéance est antérieure au 31 décembre 2021.
 """
 # %%
 
-product = product.drop(product[product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
+# TODO there is no LISTING_RECORD_CERTIFIED_THROUGH prior to 31-12-2021 and date conversion cause a conflict when loading back files...
+# product = product.drop(product[product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
 
 # %%
 """
@@ -529,8 +545,7 @@ print(product['NDC_EXCLUDE_FLAG'].value_counts())
 # %%
 """
 Les colonnes SUBSTANCENAME, ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT présentent des valeurs multiples liées. Leur
-nombre dans chacune des colonnes doit donc être égal. 
-On les vérifie deux à deux.
+nombre dans chacune des colonnes doit donc être égal. On les vérifie deux à deux.
 """
 
 # %%
@@ -558,7 +573,8 @@ def replace_outliers_productndc(table):
     outliers = table['PRODUCTNDC'][~table['PRODUCTNDC'].str.contains(r'\d{4,5}-\d{3,4}', regex=True, na=False)]
     id_outliers = table.iloc[outliers.index.values.tolist()]['PRODUCTID']
     for (io, i) in zip(id_outliers, outliers.index.values.tolist()):
-        table.at[i, 'PRODUCTNDC'] = re.match('(^[^_]+)', io).group(0)
+        if not pd.isnull(io):
+            table.at[i, 'PRODUCTNDC'] = re.match('(^[^_]+)', io).group(0)
 
 
 replace_outliers_productndc(product)
@@ -616,10 +632,10 @@ Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à 
 
 # %%
 
-date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-if not package_encode_file_exist:
-    # time_methode(date_convert, **dict(dc=date_cols))
-    date_convert(package, date_cols)
+# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+# TODO data conversion causes conflist when loading data back
+# if not package_encode_file_exist:
+#     date_convert(product, date_cols)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 nb = package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']].shape[0]
@@ -842,6 +858,7 @@ print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(
 common_rows = package[package['PRODUCTID'].isin(product['PRODUCTID'])]
 pd.concat([product, package], sort=False).drop_duplicates(keep=False)
 
+print(common_rows)
 # %%
 """
 # Transformation en données numériques (après question 8)
@@ -849,7 +866,7 @@ pd.concat([product, package], sort=False).drop_duplicates(keep=False)
 """
 
 # %%
-"""
+
 # Call and time onehot encoding for all predefined columns
 if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
@@ -905,4 +922,3 @@ product
 print('Encoded packaging data:')
 print(package)
 package
-"""
