@@ -740,23 +740,11 @@ assert_table_completeness(product)
 """
 
 # %%
-
-# %%
-# TODO: hash PROPRIETARYNAME NONPROPRIETARYNAME LABELERNAME PROPRIETARYNAMESUFFIX
-# TODO: separate and hash SUBSTANCENAME PHARM_CLASSES
-# TODO : split ACTIVE_INGRED_UNIT by '/' (nan others), then one hot each col
-
-# TODO: ideas?? APPLICATIONNUMBER
-# %%
-# TODO : analysis ratio per category
-
-# %%
 """
 ## Encodage onehot
 """
 
 # %%
-"""
 # Call and time onehot encoding for all predefined columns
 if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
@@ -812,4 +800,3 @@ product
 print('Encoded packaging data:')
 print(package)
 package
-"""
