@@ -484,15 +484,17 @@ On se rend compte de l'existence de données aberrantes que l'on décide d'ignor
 
 # %%
 # conversion to datetime format
-# TODO: fix AttributeError: 'NoneType' object has no attribute '__name__'
-def date_convert(dc):
+def date_convert(table, dc):
     for c in dc:
-        product[c] = pd.to_datetime(product[c], errors='coerce', format='%Y%m%d')
+        table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
 
 
+# %%
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 if not product_encode_file_exist:
-    time_methode(date_convert(date_cols))
+    # TODO: fix AttributeError: 'NoneType' object has no attribute '__name__'
+    # time_methode(date_convert(product, date_cols))
+    date_convert(product, date_cols)
 # %%
 """
 Aussi, il existerait une incohérence si la date de fin de mise sur le marché est moins récente que la date de début de 
@@ -612,11 +614,23 @@ Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à 
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
 if not package_encode_file_exist:
-    time_methode(date_convert(date_cols))
+    # TODO: fix AttributeError: 'NoneType' object has no attribute '__name__'
+    # time_methode(date_convert(package, date_cols))
+    date_convert(package, date_cols)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
-nb = product[product['STARTMARKETINGDATE'] > product['ENDMARKETINGDATE']].shape[0]
+nb = package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']].shape[0]
 print(f"Nombre d'incohérences entre STARTMARKETINGDATE et ENDMARKETINGDATE: {nb}")
+print(package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']][['STARTMARKETINGDATE', 'ENDMARKETINGDATE']])
+
+# %%
+"""
+Ces anomalies semblent être valeurs aberrantes, et pourraient résulter d'une erreur manuelle. 
+On décide de les remplacer par des valeurs nulles.
+"""
+# %%
+
+package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']] = pd.NaT
 
 # %%
 """
@@ -626,7 +640,7 @@ La colonne NDC_EXCLUDE_FLAG représente un stardard FDA que l'on vérifie comme 
 cols = ['NDC_EXCLUDE_FLAG']
 standards = [standard_ndcexcludeflag]
 for (col_name, stand) in zip(cols, standards):
-    check = check_categories(product, col_name, stand)
+    check = check_categories(package, col_name, stand)
     print(f'Toutes les valeurs de la colonne {col_name} correspondent au stardard FDA: {check}')
 
 # %%
@@ -650,34 +664,37 @@ Les colonnes PRODUCTID, PRODUCTNDC et NDCPACKAGECODE suivent un format spécifi�
 # %%
 cols = ['PRODUCTNDC', 'PRODUCTID', 'NDCPACKAGECODE']
 reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{2}']
-check_format_standard(product, cols, reg)
+check_format_standard(package, cols, reg)
 
 # %%
 """
 # 4. Données manquantes
 ## Table 'package'
-On s'intéresse aux données manquantes dans les colonnes PRODUCTNDC et NDCPACKAGECODE.
+Il y a des valeurs manquantes dans les colonnes NDCPACKAGECODE et PRODUCTNDC.
+Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKAGEDESCRIPTION. Celle-ci se retrouve 
+concaténée et associée au premier contenant du produit.
 """
 
+
 # %%
-if not package_encode_file_exist:
-    package_missing_ndcpackagecode = package.iloc[np.where(pd.isnull(package['NDCPACKAGECODE']))]
-    values = package_missing_ndcpackagecode['PACKAGEDESCRIPTION'].str.extract(r'\((.*?)\).*')
+
+def replace_missing_values(table, col_name_1, col_name_2, regex):
+    missing_values = package.iloc[np.where(pd.isnull(table[col_name_1]))]
+    values = missing_values[col_name_2].str.extract(regex)
     for index, row in values.iterrows():
-        package.loc[index, 'NDCPACKAGECODE'] = row[0]
+        package.loc[index, col_name_1] = row[0]
 
-# %%
+
 if not package_encode_file_exist:
-    package_missing_productndc = package.iloc[np.where(pd.isnull(package['PRODUCTNDC']))]
-    values = package_missing_productndc['NDCPACKAGECODE'].str.extract(r'^([\w]+-[\w]+)')
-    for index, row in values.iterrows():
-        package.loc[index, 'PRODUCTNDC'] = row[0]
-
+    replace_missing_values(package, 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', r'\((.*?)\).*')
 # %%
 
 if not package_encode_file_exist:
-    # TODO : find a way to retrieve PRODUCTID from 'product' table
-    package_missing_ndcproductid = package.iloc[np.where(pd.isnull(package['PRODUCTID']))]
+    replace_missing_values(package, 'PRODUCTNDC', 'NDCPACKAGECODE', r'^([\w]+-[\w]+)')
+
+# %%
+
+assert_table_completeness(package)
 
 # %%
 """
@@ -688,7 +705,23 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 # %%
 """
 ## Table 'product'
+Un nombre conséquent de colonnes présente des valeurs manquantes. On choisit de seulement traiter la colonne PRODUCTID,
+qui sera utile lors de l'intégration des deux tables. Les autres colonnes présentent des valeurs très difficiles à 
+estimer. 
+
+Pour la colonne PRODUCTID, on va devoir utiliser la table package afin de pouvoir récupérer les bonnes valeurs. En 
+effet, les deux tables présentent les mêmes attributs PRODUCTID et PRODUCTNDC, on peut donc se baser là-dessus pour 
+retrouver les bonnes informations. Les valeurs de PRODUCTNDC étant quasiment toutes uniques, on peut considérer son
+utilisation.
 """
+# %%
+indexes_missing_val = product[product['PRODUCTID'].isnull()].index.values.tolist()
+values = package.iloc[indexes_missing_val]['PRODUCTID']
+for (v, i) in zip(values, indexes_missing_val):
+    product.at[i, 'PRODUCTID'] = v
+
+# %%
+assert_table_completeness(product)
 
 # %%
 """
@@ -723,7 +756,7 @@ mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation p
 """
 
 # %%
-
+"""
 # Call and time onehot encoding for all predefined columns
 if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
@@ -779,3 +812,4 @@ product
 print('Encoded packaging data:')
 print(package)
 package
+"""
