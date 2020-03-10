@@ -534,12 +534,15 @@ On les vérifie deux à deux.
 """
 
 # %%
+# TODO: uncomment (was too long...)
+"""
 values_count = lambda row, col: len(re.sub(r"(\().*?;?.*?(\))", '', row[col]).split(';')) if isinstance(row[col],
                                                                                                         str) else 0
 check = lambda row: values_count(row, "SUBSTANCENAME") == values_count(row, "ACTIVE_NUMERATOR_STRENGTH") \
                     == values_count(row, "ACTIVE_INGRED_UNIT")
 nb_valid = len(product.apply(check, axis=1))
 print(f"Nombre d'incohérences entre ces 3 colonnes: {product.shape[0] - nb_valid}")
+"""
 # %%
 """
 La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
@@ -714,9 +717,9 @@ retrouver les bonnes informations. Les valeurs de PRODUCTNDC étant quasiment to
 utilisation.
 """
 # %%
-indexes_missing_val = product[product['PRODUCTID'].isnull()].index.values.tolist()
-values = package.iloc[indexes_missing_val]['PRODUCTID']
-for (v, i) in zip(values, indexes_missing_val):
+missing_val = product[product['PRODUCTID'].isnull()]['PRODUCTNDC']
+values = package.loc[package['PRODUCTNDC'].isin(missing_val)]['PRODUCTID'].drop_duplicates()
+for (v, i) in zip(values, missing_val.index.values.tolist()):
     product.at[i, 'PRODUCTID'] = v
 
 # %%
@@ -724,26 +727,32 @@ assert_table_completeness(product)
 
 # %%
 """
-# 5. Duplications données
+# 5. Duplicata des objets
+On s'intéresse à la colonne PRODUCTID afin de déterminer les duplicata.
 """
+
+# %%
+product.drop_duplicates()
+
+# %%
+package.drop_duplicates()
+
+# %%
+"""
+# 6. Intégration des tables
+"""
+# %%
+common_rows = package[package['PRODUCTID'].isin(product['PRODUCTID'])]
+pd.concat([product, package], sort=False).drop_duplicates(keep=False)
 
 # %%
 """
 # Transformation en données numériques (après question 8)
-## Table 'package'
-"""
-
-# %%
-"""
-## Table 'product'
-"""
-
-# %%
-"""
 ## Encodage onehot
 """
 
 # %%
+"""
 # Call and time onehot encoding for all predefined columns
 if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
@@ -799,3 +808,4 @@ product
 print('Encoded packaging data:')
 print(package)
 package
+"""
