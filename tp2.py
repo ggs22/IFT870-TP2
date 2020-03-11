@@ -858,12 +858,21 @@ print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(
 # %%
 """
 # 6. Intégration des tables
+On se rend compte qu'un objet dans la table package ne dispose pas de son équivalent dans la table product. 
 """
 # %%
-common_rows = package[package['PRODUCTID'].isin(product['PRODUCTID'])]
-pd.concat([product, package], sort=False).drop_duplicates(keep=False)
 
-print(common_rows)
+d = package[~package['PRODUCTID'].isin(product['PRODUCTID'])]['PRODUCTID'].values[0]
+print(f'Objet de package dont PRODUCTID est manquant dans product: {d}')
+
+# %%
+"""
+On décide d'éliminer cet objet de package lors du merge, car celui-ci ne servira pas lors de l'entraînement pour le
+modèle de prédiction.
+"""
+# %%
+test = pd.merge(product, package, on='PRODUCTID')
+
 # %%
 """
 # Transformation en données numériques (après question 8)
