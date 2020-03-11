@@ -641,6 +641,17 @@ check_format_standard(product, ['PRODUCTNDC', 'PRODUCTID'], [r'\d{4,5}-\d{3,4}',
 
 # %%
 """
+L'attribut DOSAGEFORMNAME précise le mode d'administration utilisé pour le produit. On remarque que les différentes 
+catégories spécifiées par le standard présente beaucoup d'informations qui ne semblent pas extrêmement pertinentes.
+On choisit de les résumer par leur caractéristique principale.
+"""
+
+# %%
+standard_dosageformname_lower = dict((k.lower(), v.lower()) for k, v in standard_dosageformname.items())
+product['DOSAGEFORMNAME'] = product['DOSAGEFORMNAME'].replace(standard_dosageformname_lower)
+
+# %%
+"""
 ## Table 'package'
 
 Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à la table 'product'.
@@ -966,7 +977,7 @@ Notre dataframe intitulé unified_tables possède maintenant des attributs uniqu
 
 # %%
 """
-7. Proposition d'un ensemble d'attributs éliminant redondance 
+# 7. Proposition d'un ensemble d'attributs éliminant redondance 
 
 L'attribut PRODUCTID concatène les valeur du code produit NDC et de l'identifiant du SPL. On peut donc éliminer 
 l'information code produit NDC (déjà présent dans l'attribut PRODUCTNDC) et ainsi spécifier un attribut pour 
@@ -1005,24 +1016,43 @@ for (c, r) in zip(cols, reg):
     remove_content_from_attribute(c, r)
 
 # %%
+
+unified_tables = unified_tables.rename(columns={'PRODUCTID': 'SPLID',
+                                                'NDCPACKAGECODE': 'PACKAGECODE'})
+
+
+# %%
+
 print('Voici donc notre nouvel ensemble d\'attribut:')
 print(unified_tables.head())
+print(assert_table_completeness(unified_tables))
 
 # %%
 """
-8. Proposition d'un ensemble d'attributs pour la prédiction des classes pharmaceutiques
-"""
+# 8. Proposition d'un ensemble d'attributs pour la prédiction des classes pharmaceutiques
+L'attribut SPLID sert à spécifier l'identifiant SPL, qui est un hash utilisé par la FDA pour avoir une information sur 
+le document importé. Cet attribut ne nous intéresse aucunement pour la prédiction des classes pharmaceutiques.
 
-# %%
+Les attributs PRODUCTNDC, PACKAGECODE sont des simplement des identifiants qui n'apportent aucune information sur des 
+quelconques classes pharmaceutiques.
 
-# TODO: paragraphe répondant plus à la question 8
+L'attribut PRODUCTTYPENAME correspond au type de document SPL fourni à la FDA, ce qui n'est d'aucun intérêt pour 
+informer sur les classes pharmaceutiques.
+
+L'attribut PROPRIETARYNAME représente le nom commercial du produit, celui-ci présente des valeurs extrêmement diverses.
+La majorité des valeurs sont douteuses quant à leur utilité pour décrire correctement le produit. On choisit de ne pas
+pouvoir en tirer parti pour nous informer sur les classes pharmaceutiques.
+
+L'attribut PROPRIETARYNAMESUFFIX représente une spécification du nom commercial du produit. Cette attribut présente 
+un nombre extrêmement élevé de valeurs manquantes (159061) dont nous ne disposons pas assez d'informations pour les 
+compléter. Comme nous avons éliminer l'attribut PROPRIETARYNAME dont PROPRIETARYNAMESUFFIX en ait le suffixe, par soucis
+de logique, nous décidons d'éliminer également l'attribut PROPRIETARYNAMESUFFIX.
+
+L'attribut DOSAGEFORMNAME représente le mode d'administration du produit, qui 
+
+L'attribut DEASCHEDULE 
 """
-Puisque l'objectif final est un modèle de classification entre les classes pharmaceutique, il n'est pas pertinent de
-conserver les colonnes de la table où il manque beaucoup de valeurs, ou encore des valeurs qui n'ont aucun lien logique
-avec la class pharmaceutiquel. On peut donc laisser tomber les colonnes PROPRIETARYNAMESUFFIX, ENDMARKETINGDATE_x,
-APPLICATIONNUMBER, DEASCHEDULE, ENDMARKETINGDATE_y, NDC_EXCLUDE_FLAG_x, LISTING_RECORD_CERTIFIED_THROUGH, SAMPLE_PACKAGE,
-NDC_EXCLUDE_FLAG_y
-"""
+# TODO FINIR BLABLA
 
 # %%
 """
