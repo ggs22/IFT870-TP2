@@ -423,7 +423,7 @@ différentes. Cette colonne parait difficilement numérisables et les valeurs ma
 Il appert également que, toutes colonnes confondues, les valeurs uniques sont parfois simplement des permutations de
 "sous-valeurs" séparées par des charctères de ponctuation ou des charctères spéciaux. Il convient donc de
 décortiquer d'avantage ces données pour réduire le nombre de catégories au maximum pour les dimensions concernées.
-Par exemple, les 1932 valeurs uniques de la colonne ROUTENAME peuvent en fait être réduite à 65 "vraies" valeurs uniques
+Par exemple, les 1932 valeurs uniques de la colonne ROUTENAME peuvent en fait être réduite à 180 "vraies" valeurs uniques
 lorsqu'on fait abstraction des permutations:
 """
 
@@ -432,7 +432,8 @@ product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME
 print(product_unique_values)
 
 # %%
-print(product['LABELERNAME'][7252:7255])
+product_unique_values = print(product['LABELERNAME'][7252:7255])
+print(product_unique_values)
 
 # %%
 print(product['LABELERNAME'][7252:7255])
@@ -885,8 +886,20 @@ modèle de prédiction.
 
 # %%
 unified_tables = pd.merge(product, package, on='PRODUCTID')
+unified_tables2 = package.merge(product, on='PRODUCTID')
 
 print(unified_tables)
+print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+Puisque l'objectif final est un modèle de classification entre les classes pharmaceutique, il n'est pas pertinent de
+conserver les colonnes de la table où il manque beaucoup de valeurs, ou encore des valeurs qui n'ont aucun lien logique
+avec la class pharmaceutiquel. On peut donc laisser tomber les colonnes PROPRIETARYNAMESUFFIX, ENDMARKETINGDATE_x,
+APPLICATIONNUMBER, DEASCHEDULE, ENDMARKETINGDATE_y, NDC_EXCLUDE_FLAG_x, LISTING_RECORD_CERTIFIED_THROUGH, SAMPLE_PACKAGE,
+NDC_EXCLUDE_FLAG_y
+"""
+
 print(assert_table_completeness(unified_tables))
 
 # %%
