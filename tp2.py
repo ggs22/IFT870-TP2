@@ -367,9 +367,10 @@ La colonne PACKAGEDESCRIPTION est présentée sous forme de phrase et contient d
 volume, sa valeur et son unité. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur 
 '>' de manière hiérarchique.
 
-Les colonnes NDC_EXCLUDE_FLAG et SAMPLE_PACKAGE, présentant peu de valeurs différentes, et ont l'air facilement 
+Les colonnes NDC_EXCLUDE_FLAG et SAMPLE_PACKAGE, présentant peu de valeurs différentes, et sont facilement 
 traitables numériquement.
 """
+
 # %%
 """
 ## Etude des données du fichier 'product'
@@ -384,6 +385,7 @@ assert_table_completeness(product)
 On remarque que la colonne PRODUCTID présente 1560 valeurs manquantes. La colonne PRODUCTNDC quant à elle présente 
 certaines valeurs aberrantes.
 """
+
 # %%
 print(product['PRODUCTNDC'][159:161])
 
@@ -871,7 +873,11 @@ On décide d'éliminer cet objet de package lors du merge, car celui-ci ne servi
 modèle de prédiction.
 """
 # %%
-test = pd.merge(product, package, on='PRODUCTID')
+unified_tables = pd.merge(product, package, on='PRODUCTID')
+
+print(unified_tables)
+print(assert_table_completeness(unified_tables))
+
 
 # %%
 """
