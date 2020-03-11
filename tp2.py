@@ -48,7 +48,6 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
-
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
                            "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
@@ -67,12 +66,12 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "RINSE": "RINSE", "SALVE": "SALVE", "SHAMPOO": "SHAMPOO", "SHAMPOO, SUSPENSION": "SHAMPOO",
                            "SOAP": "SOAP", "SOLUTION": "SOLUTION", "SOLUTION, CONCENTRATE": "SOLUTION",
                            "SOLUTION, FOR SLUSH": "SOLUTION", "SOLUTION, GEL FORMING / DROPS": "SOLUTION",
-                           "SOLUTION, GEL FORMING, EXTENDED RELEASE": "SOLUTION", "SOLUTION/ DROPS": "SOLUTION/ DROPS",
+                           "SOLUTION, GEL FORMING, EXTENDED RELEASE": "SOLUTION", "SOLUTION/ DROPS": "SOLUTION",
                            "SPONGE": "SPONGE", "SPRAY": "SPRAY", "SPRAY, METERED": "SPRAY",
                            "SPRAY, SUSPENSION": "SPRAY", "STICK": "STICK", "STRIP": "STRIP",
                            "SUPPOSITORY": "SUPPOSITORY", "SUPPOSITORY, EXTENDED RELEASE": "SUPPOSITORY",
                            "SUSPENSION": "SUSPENSION", "SUSPENSION, EXTENDED RELEASE": "SUSPENSION",
-                           "SUSPENSION/ DROPS": "SUSPENSION/ DROPS", "SWAB": "SWAB", "SYRUP": "SYRUP",
+                           "SUSPENSION/ DROPS": "SUSPENSION", "SWAB": "SWAB", "SYRUP": "SYRUP",
                            "SYSTEM": "SYSTEM", "TABLET": "TABLET", "TABLET, CHEWABLE": "TABLET",
                            "TABLET, CHEWABLE, EXTENDED RELEASE": "TABLET", "TABLET, COATED": "TABLET",
                            "TABLET, COATED PARTICLES": "TABLET", "TABLET, DELAYED RELEASE": "TABLET",
@@ -82,7 +81,7 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "TABLET, FOR SUSPENSION": "TABLET", "TABLET, MULTILAYER": "TABLET",
                            "TABLET, MULTILAYER, EXTENDED RELEASE": "TABLET", "TABLET, ORALLY DISINTEGRATING": "TABLET",
                            "TABLET, ORALLY DISINTEGRATING, DELAYED RELEASE": "TABLET", "TABLET, SOLUBLE": "TABLET",
-                           "TABLET, SUGAR COATED": "TABLET", "TABLET WITH SENSOR": "TABLET WITH SENSOR",
+                           "TABLET, SUGAR COATED": "TABLET", "TABLET WITH SENSOR": "TABLET",
                            "TAMPON": "TAMPON", "TAPE": "TAPE", "TINCTURE": "TINCTURE", "TROCHE": "TROCHE",
                            "WAFER": "WAFER"}
 standard_routename = ["AURICULAR (OTIC)", "BUCCAL", "CONJUNCTIVAL", "CUTANEOUS", "DENTAL", "ELECTRO-OSMOSIS",
@@ -509,6 +508,7 @@ LISTING_RECORD_CERTIFIED_THROUGH.
 On se rend compte de l'existence de données aberrantes que l'on décide d'ignorer et de supprimer leur valeur.
 """
 
+
 # %%
 # conversion to datetime format
 def date_convert(table, dc):
@@ -579,6 +579,7 @@ partie de la valeur du PRODUCTID associée. En effet, celuLISTING_RECORD_CERTIFI
 correct.
 """
 
+
 # %%
 
 
@@ -637,6 +638,17 @@ def check_format_standard(table, cols, reg):
 
 
 check_format_standard(product, ['PRODUCTNDC', 'PRODUCTID'], [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+'])
+
+# %%
+"""
+L'attribut DOSAGEFORMNAME précise le mode d'administration utilisé pour le produit. On remarque que les différentes 
+catégories spécifiées par le standard présente beaucoup d'informations qui ne semblent pas extrêmement pertinentes.
+On choisit de les résumer par leur caractéristique principale.
+"""
+
+# %%
+standard_dosageformname_lower = dict((k.lower(), v.lower()) for k, v in standard_dosageformname.items())
+product['DOSAGEFORMNAME'] = product['DOSAGEFORMNAME'].replace(standard_dosageformname_lower)
 
 # %%
 """
@@ -732,6 +744,7 @@ Il y a des valeurs manquantes dans les colonnes NDCPACKAGECODE et PRODUCTNDC.
 Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKAGEDESCRIPTION. Celle-ci se retrouve
 concaténée et associée au premier contenant du produit.
 """
+
 
 # %%
 
@@ -884,6 +897,14 @@ print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(
 
 # %%
 """
+Les valeurs de l'attribut PRODUCTNDC devraient également être uniques entre elles.
+"""
+# %%
+
+d = product[product.duplicated(['PRODUCTNDC'], keep=False)]
+print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTNDC: {len(d)}')
+# %%
+"""
 # 6. Intégration des tables
 On se rend compte qu'un objet dans la table package ne dispose pas de son équivalent dans la table product. 
 """
@@ -900,21 +921,152 @@ modèle de prédiction.
 
 # %%
 unified_tables = pd.merge(product, package, on='PRODUCTID')
-unified_tables2 = package.merge(product, on='PRODUCTID')
 
 print(unified_tables)
 print(assert_table_completeness(unified_tables))
 
 # %%
 """
-Puisque l'objectif final est un modèle de classification entre les classes pharmaceutique, il n'est pas pertinent de
-conserver les colonnes de la table où il manque beaucoup de valeurs, ou encore des valeurs qui n'ont aucun lien logique
-avec la class pharmaceutiquel. On peut donc laisser tomber les colonnes PROPRIETARYNAMESUFFIX, ENDMARKETINGDATE_x,
-APPLICATIONNUMBER, DEASCHEDULE, ENDMARKETINGDATE_y, NDC_EXCLUDE_FLAG_x, LISTING_RECORD_CERTIFIED_THROUGH, SAMPLE_PACKAGE,
-NDC_EXCLUDE_FLAG_y
+Les colonnes appartenant dans les deux tables unifiées sont donc à traiter. 
+Pour l'attribut STARTMARKETINGDATE, on regarde que la table originale package présentait 243 valeurs manquantes, alors 
+que la table originale product n'en contenait aucune. Cela se reporte donc sur les colonnes  STARTMARKETINGDATE_x et 
+STARTMARKETINGDATE_y, où la deuxième présente ces valeurs manquantes. On choisit alors aisément d'éliminer 
+STARTMARKETINGDATE_y au profit de l'utilisation de STARTMARKETINGDATE_x.
+Pour l'attribut ENDMARKETINGDATE, on remarque que c'est l'inverse. Par souci de logique, on choisit donc d'éliminer 
+ENDMARKETINGDATE_x au profit de l'utilisation de ENDMARKETINGDATE_y.
 """
 
+# %%
+
+unified_tables = unified_tables.drop(['STARTMARKETINGDATE_y'], axis=1)
+
+# %%
+
+unified_tables = unified_tables.drop(['ENDMARKETINGDATE_x'], axis=1)
 print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+On se souvient que tous les objets des attributs NDC_EXCLUDE_FLAG pour les deux tables sont établies à la même valeur: 'n
+'. Le choix de la colonne à garder entre NDC_EXCLUDE_FLAG_x et NDC_EXCLUDE_FLAG_y est donc peu important.
+"""
+
+# %%
+unified_tables = unified_tables.drop(['NDC_EXCLUDE_FLAG_y'], axis=1)
+print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+On s'intéresse maintenant à l'attribut PRODUCTNDC des deux tables:
+"""
+
+# %%
+
+check = (unified_tables['PRODUCTNDC_x'] == unified_tables['PRODUCTNDC_y']).all()
+print(f'Les valeurs de l\'attribut PRODUCTNDC_x est égal ligne par ligne aux valeurs de l\'attribut PRODUCTNDC_y: '
+      f'{check}')
+
+# %%
+"""
+On peut ainsi éliminer l'une ou l'autre colonne sans soucis.
+"""
+
+# %%
+
+unified_tables = unified_tables.drop(['PRODUCTNDC_y'], axis=1)
+print(assert_table_completeness(unified_tables))
+
+# %%
+
+unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMARKETINGDATE',
+                                                'ENDMARKETINGDATE_y': 'ENDMARKETINGDATE',
+                                                'NDC_EXCLUDE_FLAG_x': 'NDC_EXCLUDE_FLAG',
+                                                'PRODUCTNDC_x': 'PRODUCTNDC'})
+
+# %%
+"""
+Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
+ tables product et package originales.
+"""
+
+# %%
+"""
+# 7. Proposition d'un ensemble d'attributs éliminant redondance 
+
+L'attribut PRODUCTID concatène les valeur du code produit NDC et de l'identifiant du SPL. On peut donc éliminer 
+l'information code produit NDC (déjà présent dans l'attribut PRODUCTNDC) et ainsi spécifier un attribut pour 
+l'identifiant du SPL que l'on nommera SPLID.
+
+L'attribut PRODUCTNDC concatène les valeurs du code label et du code produit de segment. Ces valeurs ne sont pas 
+dupliquées au sein de notre ensemble d'attributs. On peut considérer les garder également concaténées. 
+
+L'attribut APPLICATIONNUMBER concatène les valeurs du nom de la catégorie marketing et de son nombre d'application.
+Etant donné que l'attribut MARKETINGCATEGORYNAME spécifie déjà uniquement le nom de la catégorie marketing, on 
+considère acceptable d'éliminer la valeur du nom de la catégorie marketing de l'attribut APPLICATIONNUMBER. Le nom de
+cet attribut semble correspondre à nos nouvelles valeurs.
+
+L'attribut NDCPACKAGECODE concatène les valeurs du code label, du code produit de segment et code package de segment.
+Comme précédemment énoncé, on dispose déjà du code label et du code produit de segment dans l'attribut PRODUCTNDC. 
+On peut donc éliminer ces valeurs de l'attribut NDCPACKAGECODE afin de garder seulement le code package de segment. 
+Cet nouvel attribut sera nommé PACKAGECODE.
+
+L'attribut PACKAGEDESCRIPTION intègre la description de la taille et du type de package pour chacun de ses contenants.
+On y retrouve également des valeurs de NDCPACKAGECODE que l'on peut éliminer.
+"""
+
+
+# %%
+
+
+def remove_content_from_attribute(attribute, regex):
+    unified_tables[attribute] = unified_tables[attribute].replace(to_replace=regex, value='', regex=True)
+
+
+# %%
+cols = ['PRODUCTID', 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', 'APPLICATIONNUMBER']
+reg = [r'\d{4,5}-\d{3,4}_', r'\d{4,5}-\d{3,4}-', r'\(\d{4,5}-\d{3,4}-\d{2}\) ', r'[a-zA-Z]']
+
+for (c, r) in zip(cols, reg):
+    remove_content_from_attribute(c, r)
+
+# %%
+
+unified_tables = unified_tables.rename(columns={'PRODUCTID': 'SPLID',
+                                                'NDCPACKAGECODE': 'PACKAGECODE'})
+
+
+# %%
+
+print('Voici donc notre nouvel ensemble d\'attribut:')
+print(unified_tables.head())
+print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+# 8. Proposition d'un ensemble d'attributs pour la prédiction des classes pharmaceutiques
+L'attribut SPLID sert à spécifier l'identifiant SPL, qui est un hash utilisé par la FDA pour avoir une information sur 
+le document importé. Cet attribut ne nous intéresse aucunement pour la prédiction des classes pharmaceutiques.
+
+Les attributs PRODUCTNDC, PACKAGECODE sont des simplement des identifiants qui n'apportent aucune information sur des 
+quelconques classes pharmaceutiques.
+
+L'attribut PRODUCTTYPENAME correspond au type de document SPL fourni à la FDA, ce qui n'est d'aucun intérêt pour 
+informer sur les classes pharmaceutiques.
+
+L'attribut PROPRIETARYNAME représente le nom commercial du produit, celui-ci présente des valeurs extrêmement diverses.
+La majorité des valeurs sont douteuses quant à leur utilité pour décrire correctement le produit. On choisit de ne pas
+pouvoir en tirer parti pour nous informer sur les classes pharmaceutiques.
+
+L'attribut PROPRIETARYNAMESUFFIX représente une spécification du nom commercial du produit. Cette attribut présente 
+un nombre extrêmement élevé de valeurs manquantes (159061) dont nous ne disposons pas assez d'informations pour les 
+compléter. Comme nous avons éliminer l'attribut PROPRIETARYNAME dont PROPRIETARYNAMESUFFIX en ait le suffixe, par soucis
+de logique, nous décidons d'éliminer également l'attribut PROPRIETARYNAMESUFFIX.
+
+L'attribut DOSAGEFORMNAME représente le mode d'administration du produit, qui 
+
+L'attribut DEASCHEDULE 
+"""
+# TODO FINIR BLABLA
 
 # %%
 """
@@ -971,11 +1123,11 @@ print(assert_table_completeness(unified_tables))
 """
 
 # %%
-print('Encoded product data:')
-print(product)
-product
-
-# %%
-print('Encoded packaging data:')
-print(package)
-package
+# print('Encoded product data:')
+# print(product)
+# product
+#
+# # %%
+# print('Encoded packaging data:')
+# print(package)
+# package
