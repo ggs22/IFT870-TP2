@@ -335,12 +335,6 @@ else:
 df_to_lower(product)
 df_to_lower(package)
 
-if product_encode_file_exist:
-    print('Get unique values for ROUTENAME column of PRODUCT table')
-    product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
-    print(product_unique_values)
-    print(enc_dic['ROUTENAME'].categories_[0])
-
 # %%
 """
 # 1. Auscultation
@@ -397,7 +391,7 @@ valeur manquante. Cette colonne sera donc facilement numérisable.
 La colonne PROPRIETARYNAME dispose d'un grand nombre de valeurs différentes, de type textuelle. Ces valeurs sont assez 
 variables (phrase, simple mot) décrivant plus ou moins le produit. 
 La colonne PROPRIETARYNAMESUFFIX est du même type que PROPRIETARYNAME, cependant elle présente beaucoup de valeurs 
-nulles, et apporte des informations variantes aux objets. La documentation précise ne pas reconnaître de standard.
+nulles, et apporte des informations variantes aux objets. La documentation précise ne reconnait pas de standard.
 
 La colonne NONPROPRIETARYNAME présente seulement 4 valeurs manquantes mais un nombre très important de valeurs 
 textuelles différentes. Elle indique les ingrédients actifs du produit, donc présente ses valeurs sous forme de liste
@@ -425,7 +419,20 @@ colonne MARKETINGCATEGORYNAME). Il y a un nombre important de valeurs manquantes
 
 La colonne LABELERNAME présente des données textuelles très inconsistantes réflétant donc le nombre important de valeurs
 différentes. Cette colonne parait difficilement numérisables et les valeurs manquantes (557) non complétables. 
+
+Il appert également que, toutes colonnes confondues, les valeurs uniques sont parfois simplement des permutations de
+"sous-valeurs" séparées par des charctères de ponctuation ou des charctères spéciaux. Il convient donc de
+décortiquer d'avantage ces données pour réduire le nombre de catégories au maximum pour les dimensions concernées.
+Par exemple, les 1932 valeurs uniques de la colonne ROUTENAME peuvent en fait être réduite à 65 "vraies" valeurs uniques
+lorsqu'on fait abstraction des permutations:
 """
+
+# %%
+product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
+print(product_unique_values)
+
+# %%
+print(product['LABELERNAME'][7252:7255])
 
 # %%
 print(product['LABELERNAME'][7252:7255])
