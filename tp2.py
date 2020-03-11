@@ -49,7 +49,6 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
 
-
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
                            "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
@@ -137,6 +136,7 @@ encoded_package_file = 'transformed_package_data.csv'
 
 product_encode_file_exist = False
 package_encode_file_exist = False
+
 
 # TODO incohernce entre dates
 # TODO incohernce entre routname / forme
@@ -280,14 +280,17 @@ def progress(count, total, status=''):
     print('\r', end='', flush=True)
     print(_str, end='', flush=True)
 
+
 def date_convert(table, dc):
     for c in dc:
         table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
+
 
 def date_convert_back(table, dc):
     for c in dc:
         for index, _ in table[c].items():
             table[c][index] = pd.Timestamp(table[c][index])
+
 
 """
 Load data:
@@ -507,9 +510,9 @@ def date_convert(table, dc):
 
 # %%
 # TODO date conversion cause conflict when loading back data
-# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-# if not product_encode_file_exist:
-#     date_convert(product, date_cols)
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
+if not product_encode_file_exist:
+    date_convert(product, date_cols)
 
 # %%
 """
@@ -530,9 +533,10 @@ colonne est passée. En l'occurence, il n'y a uncun produit dont la date d'éch�
 """
 # %%
 
-# TODO there is no LISTING_RECORD_CERTIFIED_THROUGH prior to 31-12-2021 and date conversion cause a conflict when loading back files...
-# product = product.drop(product[product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()].index)
-
+# TODO #1 there is no LISTING_RECORD_CERTIFIED_THROUGH prior to 31-12-2021 and date conversion cause a conflict when loading back files...
+# TODO #2 check fix
+nb = (product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()).sum()
+print(f'Nombre d\'incohérences pour l\'attribut LISTING_RECORD_CERTIFIED_THROUGH: {nb}')
 # %%
 """
 La colonne NDC_EXCLUDE_FLAG ne devrait présenter que des valeurs de la catégorie 'N' pour notre dataset, comme le 
@@ -549,19 +553,19 @@ nombre dans chacune des colonnes doit donc être égal. On les vérifie deux à 
 """
 
 # %%
-# TODO: uncomment (was too long...)
-"""
 values_count = lambda row, col: len(re.sub(r"(\().*?;?.*?(\))", '', row[col]).split(';')) if isinstance(row[col],
                                                                                                         str) else 0
 check = lambda row: values_count(row, "SUBSTANCENAME") == values_count(row, "ACTIVE_NUMERATOR_STRENGTH") \
                     == values_count(row, "ACTIVE_INGRED_UNIT")
 nb_valid = len(product.apply(check, axis=1))
 print(f"Nombre d'incohérences entre ces 3 colonnes: {product.shape[0] - nb_valid}")
-"""
+
+# %%
+# TODO: print outliers PRODUCTNDC dans product
 # %%
 """
 La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
-partie de la valeur du PRODUCTID associée. En effet, celui-ci étant un duplicata, celui-ci peut être considéré comme 
+partie de la valeur du PRODUCTID associée. En effet, celuLISTING_RECORD_CERTIFIED_THROUGHi-ci étant un duplicata, celui-ci peut être considéré comme 
 correct.
 """
 
@@ -618,11 +622,12 @@ print(f'Toutes les valeurs de la colonne DOSAGEFORMNAME correspondent au stardar
 
 def check_format_standard(table, cols, reg):
     for (c, r) in zip(cols, reg):
-        check = table[c].str.contains(r, regex=True, na=False).sum() == table.shape[0]
+        check = table[c].str.contains(r, regex=True, na=True).sum() == table.shape[0]
         print(f'La colonne {c} répond au format de la standardisation: {check}')
 
 
 check_format_standard(product, ['PRODUCTNDC', 'PRODUCTID'], [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+'])
+
 # %%
 """
 ## Table 'package'
@@ -632,10 +637,10 @@ Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à 
 
 # %%
 
-# date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
+date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
 # TODO data conversion causes conflist when loading data back
-# if not package_encode_file_exist:
-#     date_convert(product, date_cols)
+if not package_encode_file_exist:
+    date_convert(package, date_cols)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 nb = package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']].shape[0]
@@ -644,7 +649,7 @@ print(package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']][['STA
 
 # %%
 """
-Ces anomalies semblent être valeurs aberrantes, et pourraient résulter d'une erreur manuelle. 
+Ces anomalies semblent être valeurs aberrantes, et pourraient résulter d'une erreur manuelle.
 On décide de les remplacer par des valeurs nulles.
 """
 # %%
@@ -712,7 +717,7 @@ for (i, v) in correct_val.iterrows():
 # 4. Données manquantes
 ## Table 'package'
 Il y a des valeurs manquantes dans les colonnes NDCPACKAGECODE et PRODUCTNDC.
-Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKAGEDESCRIPTION. Celle-ci se retrouve 
+Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKAGEDESCRIPTION. Celle-ci se retrouve
 concaténée et associée au premier contenant du produit.
 """
 
@@ -740,18 +745,18 @@ assert_table_completeness(package)
 # %%
 """
 Il existe des valeurs manquantes pour les colonnes 'STARTMARKETINGDATE' et 'ENDMARKETINGDATE' dans la table 'package'
-mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation précise. 
+mais on choisit de ne pas les compléter car on ne peut effectuer d'estimation précise.
 """
 
 # %%
 """
 ## Table 'product'
 Un nombre conséquent de colonnes présente des valeurs manquantes. On choisit de seulement traiter la colonne PRODUCTID,
-qui sera utile lors de l'intégration des deux tables. Les autres colonnes présentent des valeurs très difficiles à 
-estimer. 
+qui sera utile lors de l'intégration des deux tables. Les autres colonnes présentent des valeurs très difficiles à
+estimer.
 
-Pour la colonne PRODUCTID, on va devoir utiliser la table package afin de pouvoir récupérer les bonnes valeurs. En 
-effet, les deux tables présentent les mêmes attributs PRODUCTID et PRODUCTNDC, on peut donc se baser là-dessus pour 
+Pour la colonne PRODUCTID, on va devoir utiliser la table package afin de pouvoir récupérer les bonnes valeurs. En
+effet, les deux tables présentent les mêmes attributs PRODUCTID et PRODUCTNDC, on peut donc se baser là-dessus pour
 retrouver les bonnes informations. Les valeurs de PRODUCTNDC étant quasiment toutes uniques, on peut considérer son
 utilisation.
 """
@@ -768,8 +773,8 @@ assert_table_completeness(package)
 """
 # 5. Duplicata des objets
 ## Table package
-On s'intéresse à la colonne NDCPACKAGECODE afin de déterminer les duplicata. En effet plusieurs packages peuvent être 
-associés à un produit (PRODUCTID), cependant les code package doivent être uniques. 
+On s'intéresse à la colonne NDCPACKAGECODE afin de déterminer les duplicata. En effet plusieurs packages peuvent être
+associés à un produit (PRODUCTID), cependant les code package doivent être uniques.
 """
 
 # %%
@@ -828,7 +833,7 @@ print(d['STARTMARKETINGDATE'])
 
 # %%
 """
-La valeur de STARTMARKETINGDATE confirme un des objets dupliqués dans package. On décide alors d'éliminer l'objet 
+La valeur de STARTMARKETINGDATE confirme un des objets dupliqués dans package. On décide alors d'éliminer l'objet
 présentant une valeur différente de STARTMARKETINGDATE dans package.
 """
 
@@ -866,7 +871,7 @@ print(common_rows)
 """
 
 # %%
-
+"""
 # Call and time onehot encoding for all predefined columns
 if not os.path.isdir(encoder_dir):
     os.mkdir(encoder_dir)
@@ -922,3 +927,4 @@ product
 print('Encoded packaging data:')
 print(package)
 package
+"""
