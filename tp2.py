@@ -508,6 +508,7 @@ LISTING_RECORD_CERTIFIED_THROUGH.
 On se rend compte de l'existence de données aberrantes que l'on décide d'ignorer et de supprimer leur valeur.
 """
 
+
 # %%
 # conversion to datetime format
 def date_convert(table, dc):
@@ -577,6 +578,7 @@ La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons 
 partie de la valeur du PRODUCTID associée. En effet, celuLISTING_RECORD_CERTIFIED_THROUGHi-ci étant un duplicata, celui-ci peut être considéré comme 
 correct.
 """
+
 
 # %%
 
@@ -731,6 +733,7 @@ Il y a des valeurs manquantes dans les colonnes NDCPACKAGECODE et PRODUCTNDC.
 Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKAGEDESCRIPTION. Celle-ci se retrouve
 concaténée et associée au premier contenant du produit.
 """
+
 
 # %%
 
@@ -893,7 +896,6 @@ modèle de prédiction.
 
 # %%
 unified_tables = pd.merge(product, package, on='PRODUCTID')
-# unified_tables2 = package.merge(product, on='PRODUCTID')
 
 print(unified_tables)
 print(assert_table_completeness(unified_tables))
@@ -959,12 +961,61 @@ unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMA
 # %%
 """
 Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
- tables product et package originales.  
+ tables product et package originales.
+"""
+
+# %%
+"""
+7. Proposition d'un ensemble d'attributs éliminant redondance 
+
+L'attribut PRODUCTID concatène les valeur du code produit NDC et de l'identifiant du SPL. On peut donc éliminer 
+l'information code produit NDC (déjà présent dans l'attribut PRODUCTNDC) et ainsi spécifier un attribut pour 
+l'identifiant du SPL que l'on nommera SPLID.
+
+L'attribut PRODUCTNDC concatène les valeurs du code label et du code produit de segment. Ces valeurs ne sont pas 
+dupliquées au sein de notre ensemble d'attributs. On peut considérer les garder également concaténées. 
+
+L'attribut APPLICATIONNUMBER concatène les valeurs du nom de la catégorie marketing et de son nombre d'application.
+Etant donné que l'attribut MARKETINGCATEGORYNAME spécifie déjà uniquement le nom de la catégorie marketing, on 
+considère acceptable d'éliminer la valeur du nom de la catégorie marketing de l'attribut APPLICATIONNUMBER. Le nom de
+cet attribut semble correspondre à nos nouvelles valeurs.
+
+L'attribut NDCPACKAGECODE concatène les valeurs du code label, du code produit de segment et code package de segment.
+Comme précédemment énoncé, on dispose déjà du code label et du code produit de segment dans l'attribut PRODUCTNDC. 
+On peut donc éliminer ces valeurs de l'attribut NDCPACKAGECODE afin de garder seulement le code package de segment. 
+Cet nouvel attribut sera nommé PACKAGECODE.
+
+L'attribut PACKAGEDESCRIPTION intègre la description de la taille et du type de package pour chacun de ses contenants.
+On y retrouve également des valeurs de NDCPACKAGECODE que l'on peut éliminer.
+"""
+
+
+# %%
+
+
+def remove_content_from_attribute(attribute, regex):
+    unified_tables[attribute] = unified_tables[attribute].replace(to_replace=regex, value='', regex=True)
+
+
+# %%
+cols = ['PRODUCTID', 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', 'APPLICATIONNUMBER']
+reg = [r'\d{4,5}-\d{3,4}_', r'\d{4,5}-\d{3,4}-', r'\(\d{4,5}-\d{3,4}-\d{2}\) ', r'[a-zA-Z]']
+
+for (c, r) in zip(cols, reg):
+    remove_content_from_attribute(c, r)
+
+# %%
+print('Voici donc notre nouvel ensemble d\'attribut:')
+print(unified_tables.head())
+
+# %%
+"""
+8. Proposition d'un ensemble d'attributs pour la prédiction des classes pharmaceutiques
 """
 
 # %%
 
-# TODO: paragraphe répondant plus à la question 7 ou 8
+# TODO: paragraphe répondant plus à la question 8
 """
 Puisque l'objectif final est un modèle de classification entre les classes pharmaceutique, il n'est pas pertinent de
 conserver les colonnes de la table où il manque beaucoup de valeurs, ou encore des valeurs qui n'ont aucun lien logique
@@ -972,8 +1023,6 @@ avec la class pharmaceutiquel. On peut donc laisser tomber les colonnes PROPRIET
 APPLICATIONNUMBER, DEASCHEDULE, ENDMARKETINGDATE_y, NDC_EXCLUDE_FLAG_x, LISTING_RECORD_CERTIFIED_THROUGH, SAMPLE_PACKAGE,
 NDC_EXCLUDE_FLAG_y
 """
-
-print(assert_table_completeness(unified_tables))
 
 # %%
 """
@@ -1029,11 +1078,11 @@ print(assert_table_completeness(unified_tables))
 """
 
 # %%
-print('Encoded product data:')
-print(product)
-product
-
-# %%
-print('Encoded packaging data:')
-print(package)
-package
+# print('Encoded product data:')
+# print(product)
+# product
+#
+# # %%
+# print('Encoded packaging data:')
+# print(package)
+# package
