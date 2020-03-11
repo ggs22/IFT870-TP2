@@ -432,7 +432,6 @@ print(product['LABELERNAME'][7252:7255])
 
 # %%
 """
-
 La colonne SUBSTANCENAME présente des données du standard FDA, celui-ci est composé de 108 227 catégories différentes.
 Chaque objet peut présenter plusieurs catégories, la représentation de valeurs multiples est consistante via le 
 séparateur ';'. Cela pourrait expliquer le nombre important de valeurs différentes. Le nombre de valeurs manquantes
@@ -502,7 +501,6 @@ LISTING_RECORD_CERTIFIED_THROUGH.
 On se rend compte de l'existence de données aberrantes que l'on décide d'ignorer et de supprimer leur valeur.
 """
 
-
 # %%
 # conversion to datetime format
 def date_convert(table, dc):
@@ -511,6 +509,7 @@ def date_convert(table, dc):
 
 
 # %%
+
 # TODO date conversion cause conflict when loading back data
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 if not product_encode_file_exist:
@@ -533,19 +532,20 @@ La colonne LISTING_RECORD_CERTIFIED_THROUGH permet de savoir si la certification
 donc que le produit n'est plus à jour (et donc à supprimer de notre dataset) si la date précisée dans cette 
 colonne est passée. En l'occurence, il n'y a uncun produit dont la date d'échéance est antérieure au 31 décembre 2021.
 """
-# %%
 
+# %%
 # TODO #1 there is no LISTING_RECORD_CERTIFIED_THROUGH prior to 31-12-2021 and date conversion cause a conflict when loading back files...
 # TODO #2 check fix
 nb = (product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()).sum()
 print(f'Nombre d\'incohérences pour l\'attribut LISTING_RECORD_CERTIFIED_THROUGH: {nb}')
+
 # %%
 """
 La colonne NDC_EXCLUDE_FLAG ne devrait présenter que des valeurs de la catégorie 'N' pour notre dataset, comme le 
 précise la documentation FDA. On le vérifie simplement:
 """
-# %%
 
+# %%
 print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
@@ -562,15 +562,14 @@ check = lambda row: values_count(row, "SUBSTANCENAME") == values_count(row, "ACT
 nb_valid = len(product.apply(check, axis=1))
 print(f"Nombre d'incohérences entre ces 3 colonnes: {product.shape[0] - nb_valid}")
 
-# %%
 # TODO: print outliers PRODUCTNDC dans product
+
 # %%
 """
 La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
 partie de la valeur du PRODUCTID associée. En effet, celuLISTING_RECORD_CERTIFIED_THROUGHi-ci étant un duplicata, celui-ci peut être considéré comme 
 correct.
 """
-
 
 # %%
 
@@ -584,6 +583,7 @@ def replace_outliers_productndc(table):
 
 
 replace_outliers_productndc(product)
+
 # %%
 """
 Certaines colonnes représentent des standards FDA, afin d'assurer aucune incohérence dans leurs valeurs, 
@@ -654,14 +654,16 @@ print(package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']][['STA
 Ces anomalies semblent être valeurs aberrantes, et pourraient résulter d'une erreur manuelle.
 On décide de les remplacer par des valeurs nulles.
 """
-# %%
 
+# %%
 package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']] = pd.NaT
 
 # %%
 """
 La colonne NDC_EXCLUDE_FLAG représente un stardard FDA que l'on vérifie comme pour la table 'product'.
+
 """
+
 # %%
 cols = ['NDC_EXCLUDE_FLAG']
 standards = [standard_ndcexcludeflag]
@@ -685,8 +687,8 @@ Les colonnes PRODUCTID, PRODUCTNDC et NDCPACKAGECODE suivent un format spécifi�
 - PRODUCTNDC doit répondre à une structure de digits telle que {3-5}, {3-4}, {4-4}, {4-5}.
 - PRODUCTID concatène la valeur du PRODUCTNDC et un identifiant SPL séparé par un '_'.
 - NDCPACKAGECODE concatène la valeur du PRODUCTNDC et un code segment de 2 digits séparé par '-'.
-
 """
+
 # %%
 cols = ['PRODUCTNDC', 'PRODUCTID', 'NDCPACKAGECODE']
 reg = [r'\d{4,5}-\d{3,4}', r'\d{4,5}-\d{3,4}_[A-Za-z0-9\-]+', r'\d{4,5}-\d{3,4}-\d{1,2}']
@@ -696,8 +698,8 @@ check_format_standard(package, cols, reg)
 """
 On remarque que les valeurs de la colonne NDCPACKAGECODE ne répondent pas toutes au format de la standardisation.
 """
-# %%
 
+# %%
 val_bad_formatting = package[~package['NDCPACKAGECODE'].str.contains(r'\d{4,5}-\d{3,4}-\d{1,2}', regex=True, na=False)]
 val_bad_formatting['NDCPACKAGECODE']
 
@@ -723,7 +725,6 @@ Pour la colonne NDCPACKAGECODE, on peut récupérer cette information dans PACKA
 concaténée et associée au premier contenant du produit.
 """
 
-
 # %%
 
 def replace_missing_values(table, col_name_1, col_name_2, regex):
@@ -735,8 +736,8 @@ def replace_missing_values(table, col_name_1, col_name_2, regex):
 
 if not package_encode_file_exist:
     replace_missing_values(package, 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', r'\((.*?)\).*')
-# %%
 
+# %%
 if not package_encode_file_exist:
     replace_missing_values(package, 'PRODUCTNDC', 'NDCPACKAGECODE', r'^([\w]+-[\w]+)')
 
@@ -762,6 +763,7 @@ effet, les deux tables présentent les mêmes attributs PRODUCTID et PRODUCTNDC,
 retrouver les bonnes informations. Les valeurs de PRODUCTNDC étant quasiment toutes uniques, on peut considérer son
 utilisation.
 """
+
 # %%
 missing_val = product[product['PRODUCTID'].isnull()]['PRODUCTNDC']
 values = package.loc[package['PRODUCTNDC'].isin(missing_val)]['PRODUCTID'].drop_duplicates()
@@ -788,6 +790,7 @@ package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)]
 Celle-ci montre que nous avons 2 objets présentant un duplicata de code package. On les étudie deux à deux.
 ### Premier duplicata
 """
+
 # %%
 # NaN values are set to 0 to not compromise test
 print(package_duplicated.fillna(0).iloc[0] == package_duplicated.fillna(0).iloc[1])
@@ -817,8 +820,8 @@ package = package.drop(package_duplicated.index[1])
 """
 ### Deuxième duplicata
 """
-# %%
 
+# %%
 print(package_duplicated.fillna(0).iloc[2] == package_duplicated.fillna(0).iloc[3])
 print(package_duplicated.iloc[2:4]['STARTMARKETINGDATE'])
 
@@ -862,8 +865,8 @@ print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(
 # 6. Intégration des tables
 On se rend compte qu'un objet dans la table package ne dispose pas de son équivalent dans la table product. 
 """
-# %%
 
+# %%
 d = package[~package['PRODUCTID'].isin(product['PRODUCTID'])]['PRODUCTID'].values[0]
 print(f'Objet de package dont PRODUCTID est manquant dans product: {d}')
 
@@ -872,12 +875,12 @@ print(f'Objet de package dont PRODUCTID est manquant dans product: {d}')
 On décide d'éliminer cet objet de package lors du merge, car celui-ci ne servira pas lors de l'entraînement pour le
 modèle de prédiction.
 """
+
 # %%
 unified_tables = pd.merge(product, package, on='PRODUCTID')
 
 print(unified_tables)
 print(assert_table_completeness(unified_tables))
-
 
 # %%
 """
@@ -886,47 +889,46 @@ print(assert_table_completeness(unified_tables))
 """
 
 # %%
-"""
 # Call and time onehot encoding for all predefined columns
-if not os.path.isdir(encoder_dir):
-    os.mkdir(encoder_dir)
-if not product_encode_file_exist:
-    for header in product_headers_to_encode:
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-                    pickle.HIGHEST_PROTOCOL)
-
-# if not package_encode_file_exist:
-#     for header in package_headers_to_encode:
-#         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
+# if not os.path.isdir(encoder_dir):
+#     os.mkdir(encoder_dir)
+# if not product_encode_file_exist:
+#     for header in product_headers_to_encode:
+#         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product, header=header)))
 #         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
 #                     pickle.HIGHEST_PROTOCOL)
-
-if not os.path.isdir(encoding_dir):
-    {os.mkdir(encoding_dir)}
-# Prints out encding of each category for a given column in a txt file
-for header, enc in enc_dic.items():
-    file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
-    for category in enc.categories_[0]:
-        tmp_str = str(enc.transform([[category]]).toarray())
-        tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
-        file.write(tmp_str)
-    file.close()
-
-# Save transformed data to file
-if not product_encode_file_exist:
-    time_methode(product.to_csv, **(dict(path_or_buf=encoded_product_file,
-                                         index=False,
-                                         sep=separ,
-                                         encoding=target_encoding,
-                                         quoting=csv.QUOTE_NONNUMERIC)))
-
-if not product_encode_file_exist:
-    time_methode(package.to_csv, **(dict(path_or_buf=encoded_package_file,
-                                         index=False,
-                                         sep=separ,
-                                         encoding=target_encoding,
-                                         quoting=csv.QUOTE_NONNUMERIC)))
+#
+# # if not package_encode_file_exist:
+# #     for header in package_headers_to_encode:
+# #         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
+# #         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
+# #                     pickle.HIGHEST_PROTOCOL)
+#
+# if not os.path.isdir(encoding_dir):
+#     {os.mkdir(encoding_dir)}
+# # Prints out encding of each category for a given column in a txt file
+# for header, enc in enc_dic.items():
+#     file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
+#     for category in enc.categories_[0]:
+#         tmp_str = str(enc.transform([[category]]).toarray())
+#         tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
+#         file.write(tmp_str)
+#     file.close()
+#
+# # Save transformed data to file
+# if not product_encode_file_exist:
+#     time_methode(product.to_csv, **(dict(path_or_buf=encoded_product_file,
+#                                          index=False,
+#                                          sep=separ,
+#                                          encoding=target_encoding,
+#                                          quoting=csv.QUOTE_NONNUMERIC)))
+#
+# if not product_encode_file_exist:
+#     time_methode(package.to_csv, **(dict(path_or_buf=encoded_package_file,
+#                                          index=False,
+#                                          sep=separ,
+#                                          encoding=target_encoding,
+#                                          quoting=csv.QUOTE_NONNUMERIC)))
 
 # %%
 """
@@ -942,4 +944,3 @@ product
 print('Encoded packaging data:')
 print(package)
 package
-"""
