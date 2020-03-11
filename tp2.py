@@ -6,14 +6,14 @@ import re
 import csv
 import os
 import pickle
+import tqdm
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 
 # %%
 
-product_headers_to_encode = ['PRODUCTTYPENAME', 'ROUTENAME', 'DOSAGEFORMNAME', 'MARKETINGCATEGORYNAME',
-                             'ACTIVE_NUMERATOR_STRENGTH', 'ACTIVE_INGRED_UNIT']
+product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES', 'DEASCHEDULE']
 package_headers_to_encode = ['PACKAGEDESCRIPTION']
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
@@ -214,9 +214,9 @@ def get_onehot_encoders(table, cols):
     encoder_dict = {}
     for col in cols:
         uniques_vals = get_decomposed_uniques(table, header=col)
-        enc = OneHotEncoder(handle_unknown='ignore')
+        enc = OneHotEncoder(handle_unknown='ignore', dtype=int)
         enc.fit_transform(uniques_vals)
-        encoder_dict[col] = enc
+        encoder_dict[   col] = enc
     return encoder_dict
 
 
@@ -302,8 +302,8 @@ package_encode_file_exist = os.path.isfile(encoded_package_file)
 
 enc_dic = {}
 
-original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1')
-original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1')
+original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1').copy()
+original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1').copy()
 
 # %%
 
@@ -423,7 +423,7 @@ différentes. Cette colonne parait difficilement numérisables et les valeurs ma
 Il appert également que, toutes colonnes confondues, les valeurs uniques sont parfois simplement des permutations de
 "sous-valeurs" séparées par des charctères de ponctuation ou des charctères spéciaux. Il convient donc de
 décortiquer d'avantage ces données pour réduire le nombre de catégories au maximum pour les dimensions concernées.
-Par exemple, les 1932 valeurs uniques de la colonne ROUTENAME peuvent en fait être réduite à 180 "vraies" valeurs uniques
+Par exemple, les 180 valeurs uniques de la colonne ROUTENAME peuvent en fait être réduite à 65 "vraies" valeurs uniques
 lorsqu'on fait abstraction des permutations:
 """
 
@@ -791,7 +791,13 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 # %%
 
-package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)]
+tmp_prod_duplicated = product
+for header in product_headers_to_encode:
+    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
+    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+
+
+ackage_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
 
 # %%
 """
@@ -814,9 +820,12 @@ d = product.loc[product['PRODUCTID'].isin(package_duplicated.iloc[0:2]['PRODUCTI
 print(d.fillna(0).iloc[0] == d.fillna(0).iloc[1])
 
 # %%
+
 """
-Dans la table product, ces deux objets sont également différentes que pour l'attribut PRODUCTID.
-On choisit donc d'éliminer un des duplicata dans les deux tables (le premier par simplicité).
+Dans la table product, ces deux objets sont également différentes seulement pour l'attribut PRODUCTID.
+On choisit donc d'éliminer un des duplicata dans les deux tables. puisque les deux lignes dans la table product ne
+diffèrent que leurs PRODUCTID et que la portion du PRODUCTID qui suit le PRODUCTNDC est unique dans chaque cas on peut
+arbitrairement choisir de discarter la première ligne dupliquée dans chaque table.
 """
 
 # %%
@@ -830,12 +839,13 @@ package = package.drop(package_duplicated.index[1])
 """
 
 # %%
+
 print(package_duplicated.fillna(0).iloc[2] == package_duplicated.fillna(0).iloc[3])
 print(package_duplicated.iloc[2:4]['STARTMARKETINGDATE'])
 
 # %%
 """
-On remarque que ces objets présentant des NDCPACKAGECODE dupliqués ont des valeurs de STARTMARKETINGDATE divergent.
+On remarque que ces objets présentant des NDCPACKAGECODE dupliqués ont des valeurs de STARTMARKETINGDATE divergentes.
 On décide de comparer avec les objets correspondants dans la table product.
 """
 
@@ -855,6 +865,8 @@ présentant une valeur différente de STARTMARKETINGDATE dans package.
 package = package.drop(package_duplicated.index[3])
 
 # %%
+
+# confirms that there are no more duplicates in package table
 d = package[package.duplicated(['NDCPACKAGECODE'], keep=False)]
 print(f'Nombre d\'objets dupliqués dans package par rapport à NDCPACKAGECODE: {len(d)} ')
 
@@ -865,6 +877,8 @@ Pour la table product, on s'intéresse aux duplicata de l'attribut PRODUCTID qui
 """
 
 # %%
+
+# confirms that there are no more duplicates in product table
 d = product[product.duplicated(['PRODUCTID'], keep=False)]
 print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(d)}')
 
@@ -909,6 +923,7 @@ print(assert_table_completeness(unified_tables))
 """
 
 # %%
+
 # Call and time onehot encoding for all predefined columns
 # if not os.path.isdir(encoder_dir):
 #     os.mkdir(encoder_dir)
