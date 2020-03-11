@@ -48,7 +48,6 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "INJECTION, POWDER, LYOPHILIZED, FOR SUSPENSION, EXTENDED RELEASE": "INJECTION",
                            "INJECTION, SOLUTION": "INJECTION", "INJECTION, SOLUTION, CONCENTRATE": "INJECTION",
                            "INJECTION, SUSPENSION": "INJECTION", "INJECTION, SUSPENSION, EXTENDED RELEASE": "INJECTION",
-
                            "INJECTION, SUSPENSION, LIPOSOMAL": "INJECTION",
                            "INJECTION, SUSPENSION, SONICATED": "INJECTION", "INSERT": "INSERT",
                            "INSERT, EXTENDED RELEASE": "INSERT", "INTRAUTERINE DEVICE": "INTRAUTERINE DEVICE",
@@ -67,12 +66,12 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "RINSE": "RINSE", "SALVE": "SALVE", "SHAMPOO": "SHAMPOO", "SHAMPOO, SUSPENSION": "SHAMPOO",
                            "SOAP": "SOAP", "SOLUTION": "SOLUTION", "SOLUTION, CONCENTRATE": "SOLUTION",
                            "SOLUTION, FOR SLUSH": "SOLUTION", "SOLUTION, GEL FORMING / DROPS": "SOLUTION",
-                           "SOLUTION, GEL FORMING, EXTENDED RELEASE": "SOLUTION", "SOLUTION/ DROPS": "SOLUTION/ DROPS",
+                           "SOLUTION, GEL FORMING, EXTENDED RELEASE": "SOLUTION", "SOLUTION/ DROPS": "SOLUTION",
                            "SPONGE": "SPONGE", "SPRAY": "SPRAY", "SPRAY, METERED": "SPRAY",
                            "SPRAY, SUSPENSION": "SPRAY", "STICK": "STICK", "STRIP": "STRIP",
                            "SUPPOSITORY": "SUPPOSITORY", "SUPPOSITORY, EXTENDED RELEASE": "SUPPOSITORY",
                            "SUSPENSION": "SUSPENSION", "SUSPENSION, EXTENDED RELEASE": "SUSPENSION",
-                           "SUSPENSION/ DROPS": "SUSPENSION/ DROPS", "SWAB": "SWAB", "SYRUP": "SYRUP",
+                           "SUSPENSION/ DROPS": "SUSPENSION", "SWAB": "SWAB", "SYRUP": "SYRUP",
                            "SYSTEM": "SYSTEM", "TABLET": "TABLET", "TABLET, CHEWABLE": "TABLET",
                            "TABLET, CHEWABLE, EXTENDED RELEASE": "TABLET", "TABLET, COATED": "TABLET",
                            "TABLET, COATED PARTICLES": "TABLET", "TABLET, DELAYED RELEASE": "TABLET",
@@ -82,7 +81,7 @@ standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AE
                            "TABLET, FOR SUSPENSION": "TABLET", "TABLET, MULTILAYER": "TABLET",
                            "TABLET, MULTILAYER, EXTENDED RELEASE": "TABLET", "TABLET, ORALLY DISINTEGRATING": "TABLET",
                            "TABLET, ORALLY DISINTEGRATING, DELAYED RELEASE": "TABLET", "TABLET, SOLUBLE": "TABLET",
-                           "TABLET, SUGAR COATED": "TABLET", "TABLET WITH SENSOR": "TABLET WITH SENSOR",
+                           "TABLET, SUGAR COATED": "TABLET", "TABLET WITH SENSOR": "TABLET",
                            "TAMPON": "TAMPON", "TAPE": "TAPE", "TINCTURE": "TINCTURE", "TROCHE": "TROCHE",
                            "WAFER": "WAFER"}
 standard_routename = ["AURICULAR (OTIC)", "BUCCAL", "CONJUNCTIVAL", "CUTANEOUS", "DENTAL", "ELECTRO-OSMOSIS",
@@ -870,6 +869,14 @@ print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTID: {len(
 
 # %%
 """
+Les valeurs de l'attribut PRODUCTNDC devraient également être uniques entre elles.
+"""
+# %%
+
+d = product[product.duplicated(['PRODUCTNDC'], keep=False)]
+print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTNDC: {len(d)}')
+# %%
+"""
 # 6. Intégration des tables
 On se rend compte qu'un objet dans la table package ne dispose pas de son équivalent dans la table product. 
 """
@@ -886,12 +893,78 @@ modèle de prédiction.
 
 # %%
 unified_tables = pd.merge(product, package, on='PRODUCTID')
-unified_tables2 = package.merge(product, on='PRODUCTID')
+# unified_tables2 = package.merge(product, on='PRODUCTID')
 
 print(unified_tables)
 print(assert_table_completeness(unified_tables))
 
 # %%
+"""
+Les colonnes appartenant dans les deux tables unifiées sont donc à traiter. 
+Pour l'attribut STARTMARKETINGDATE, on regarde que la table originale package présentait 243 valeurs manquantes, alors 
+que la table originale product n'en contenait aucune. Cela se reporte donc sur les colonnes  STARTMARKETINGDATE_x et 
+STARTMARKETINGDATE_y, où la deuxième présente ces valeurs manquantes. On choisit alors aisément d'éliminer 
+STARTMARKETINGDATE_y au profit de l'utilisation de STARTMARKETINGDATE_x.
+Pour l'attribut ENDMARKETINGDATE, on remarque que c'est l'inverse. Par souci de logique, on choisit donc d'éliminer 
+ENDMARKETINGDATE_x au profit de l'utilisation de ENDMARKETINGDATE_y.
+"""
+
+# %%
+
+unified_tables = unified_tables.drop(['STARTMARKETINGDATE_y'], axis=1)
+
+# %%
+
+unified_tables = unified_tables.drop(['ENDMARKETINGDATE_x'], axis=1)
+print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+On se souvient que tous les objets des attributs NDC_EXCLUDE_FLAG pour les deux tables sont établies à la même valeur: 'n
+'. Le choix de la colonne à garder entre NDC_EXCLUDE_FLAG_x et NDC_EXCLUDE_FLAG_y est donc peu important.
+"""
+
+# %%
+unified_tables = unified_tables.drop(['NDC_EXCLUDE_FLAG_y'], axis=1)
+print(assert_table_completeness(unified_tables))
+
+# %%
+"""
+On s'intéresse maintenant à l'attribut PRODUCTNDC des deux tables:
+"""
+
+# %%
+
+check = (unified_tables['PRODUCTNDC_x'] == unified_tables['PRODUCTNDC_y']).all()
+print(f'Les valeurs de l\'attribut PRODUCTNDC_x est égal ligne par ligne aux valeurs de l\'attribut PRODUCTNDC_y: '
+      f'{check}')
+
+# %%
+"""
+On peut ainsi éliminer l'une ou l'autre colonne sans soucis.
+"""
+
+# %%
+
+unified_tables = unified_tables.drop(['PRODUCTNDC_y'], axis=1)
+print(assert_table_completeness(unified_tables))
+
+# %%
+
+unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMARKETINGDATE',
+                                                'ENDMARKETINGDATE_y': 'ENDMARKETINGDATE',
+                                                'NDC_EXCLUDE_FLAG_x': 'NDC_EXCLUDE_FLAG',
+                                                'PRODUCTNDC_x': 'PRODUCTNDC'})
+
+# %%
+"""
+Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
+ tables product et package originales.  
+"""
+
+# %%
+
+# TODO: paragraphe répondant plus à la question 7 ou 8
 """
 Puisque l'objectif final est un modèle de classification entre les classes pharmaceutique, il n'est pas pertinent de
 conserver les colonnes de la table où il manque beaucoup de valeurs, ou encore des valeurs qui n'ont aucun lien logique
