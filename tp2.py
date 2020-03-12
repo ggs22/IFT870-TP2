@@ -1115,13 +1115,12 @@ headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAM
 
 labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 
-
 for header in headers:
     if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
         pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-    # else
-    #     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
+    else:
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
 
 # TODO: split one hot values
 # %%
