@@ -790,13 +790,13 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 # %%
 
-tmp_prod_duplicated = product.copy()
-tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
-
-for header in product_headers_to_encode:
-    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
-    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+# tmp_prod_duplicated = product.copy()
+# tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
+# tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
+#
+# for header in product_headers_to_encode:
+#     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
+#     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
 package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
 
@@ -1103,22 +1103,25 @@ plutôt les indexes des bits à 1.
 
 # %%
 
-# tmp_prod_duplicated = product.copy()
-# tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-# tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
-#
-# for header in product_headers_to_encode:
-#     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
-#     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+tmp_prod_duplicated = product.copy()
+tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
+tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
+
+for header in product_headers_to_encode:
+    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
+    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
 
-unified_tables = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
-unified_tables.update(unified_tables)
+labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
+
 
 for header in headers:
-    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=unified_tables, header=header)))
-    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+    if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
+        pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+    # else
+    #     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
 
 # TODO: split one hot values
 # %%
