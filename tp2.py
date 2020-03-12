@@ -13,9 +13,6 @@ from sklearn.preprocessing import OneHotEncoder
 
 # %%
 
-product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES', 'DEASCHEDULE']
-package_headers_to_encode = ['PACKAGEDESCRIPTION']
-
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 
 standard_dosageformname = {"AEROSOL": "AEROSOL", "AEROSOL, FOAM": "AEROSOL", "AEROSOL, METERED": "AEROSOL",
@@ -124,8 +121,8 @@ target_encoding = 'utf-8'
 separ = '|'
 custom_sep = ' ?[|,;:<>] ?|^ | $'
 
-product_file = 'Product2.csv'
-package_file = 'Package2.csv'
+product_file = 'Product.csv'
+package_file = 'Package.csv'
 
 encoder_dir = 'encoders/'
 encoding_dir = 'enconding_dic/'
@@ -215,17 +212,20 @@ def get_onehot_encoders(table, cols):
 def onehot_encode(table, header):
     # Create onehot codes for the specidfied column
     lst = []
+    lst2 = []
     encoder_dict = get_onehot_encoders(table, [header])
 
     count = 0
     for index in table.index.values:
-        _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
+        # _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
+        lst = []
         if type(table.loc[index, header]) is str:
             for decomposed in re.split(custom_sep, table.loc[index, header]):
                 # _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
                 if not np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]) in lst:
                     lst.append(np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]))
-            # lst.append(_tmp)
+            lst.sort()
+            lst2.append(lst)
 
         # Update loading bar
         #TODO fix 100000000% caused by sparse indexing after droping NA - not that important
@@ -237,7 +237,7 @@ def onehot_encode(table, header):
     print(" -> Done", flush=True)
 
     # Replace dataframe column by encoded values
-    table.loc[header] = pd.Series(lst)
+    table.loc[:, header] = pd.Series(lst2)
 
     # return the encoder associated to that particular header
     return encoder_dict[header]
@@ -311,8 +311,8 @@ if product_encode_file_exist:
     # time_methode(date_convert_back, **dict(table=product, dc=date_cols))
 
     # Populate onehot encoders dictionnary
-    for header in product_headers_to_encode:
-        enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
+    # for header in product_headers_to_encode:
+    #     enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
 else:
     product = original_product_data
 
@@ -820,6 +820,8 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 tmp_prod_duplicated = product.copy()
 tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
+
+product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES', 'DEASCHEDULE']
 
 for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
