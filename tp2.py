@@ -136,13 +136,6 @@ encoded_package_file = 'transformed_package_data.csv'
 product_encode_file_exist = False
 package_encode_file_exist = False
 
-
-# TODO incohernce entre dates
-# TODO incohernce entre routname / forme
-# TODO incohernce entre valeurs numeric abberantes (ordre de grandeur)
-# TODO incohernce entre valeurs phase et l'emballage
-# TODO tester imputatin itérative
-
 def assert_table_completeness(table):
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
@@ -470,6 +463,7 @@ documentation. Il n'y a pas de valeur manquante.
 print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
+# TODO: reviw sérieusement :/
 """
 # 2. Relations entre attributs
 ## Informations communes
@@ -651,6 +645,10 @@ On choisit de les résumer par leur caractéristique principale.
 # %%
 standard_dosageformname_lower = dict((k.lower(), v.lower()) for k, v in standard_dosageformname.items())
 product['DOSAGEFORMNAME'] = product['DOSAGEFORMNAME'].replace(standard_dosageformname_lower)
+
+# %%
+
+assert_table_completeness(product)
 
 # %%
 """
@@ -1049,6 +1047,10 @@ print(assert_table_completeness(unified_tables))
 # %%
 """
 # 8. Proposition d'un ensemble d'attributs pour la prédiction des classes pharmaceutiques
+Comme la documentation nous l'indique, les données de l'attribut SUBSTANCENAME correspondent aux classes pharmaceutiques
+. Afin de pouvoir généraliser au mieux, on décide de se baser sur d'autres attributs. 
+
+
 L'attribut SPLID sert à spécifier l'identifiant SPL, qui est un hash utilisé par la FDA pour avoir une information sur 
 le document importé. Cet attribut ne nous intéresse aucunement pour la prédiction des classes pharmaceutiques.
 
@@ -1067,17 +1069,54 @@ un nombre extrêmement élevé de valeurs manquantes (159061) dont nous ne dispo
 compléter. Comme nous avons éliminer l'attribut PROPRIETARYNAME dont PROPRIETARYNAMESUFFIX en ait le suffixe, par soucis
 de logique, nous décidons d'éliminer également l'attribut PROPRIETARYNAMESUFFIX.
 
-L'attribut DOSAGEFORMNAME représente le mode d'administration du produit, qui 
+L'attribut ROUTENAME présente le mode d'administration du produit, celui-ci pourrait se révéler être lié d'une 
+quelconque manière à la substance et par conséquent à une classe pharmaceutique.
 
-L'attribut DEASCHEDULE 
+L'attribut DOSAGEFORMNAME représente le forme de dosage du produit, celui-ci est lié au mode d'administration. 
+Pareillement, cet attribut pourrait être corrélé à la substance et donc par conséquent la classe pharmaceutique. 
+ 
+Les attributs STARTMARKETINGDATE et ENDMARKETINGDATE présentent des informations sur les dates de mise en marché des
+produits. Cela ne nous intéresse aucunement pour déterminer les classes pharmaceutiques.
+
+L'attribut MARKETINGCATEGORYNAME et son information sur le nom de la catégorie marketing pourrait se révéler être
+informatif sur la substance du produit et donc ses classes pharmaceutiques.
+
+L'attribut APPLICATIONNUMBER représente un identifiant de la catégorie marketing, ces valeurs n'auront donc 
+logiquement aucune influence sur ses classes pharmaceutiques.
+
+L'attribut LABELERNAME informe sur l'entreprise qui a créé ce produit. On considère que cela n'aura pas d'intérêt.
+
+Les attributs ACTIVE_NUMERATOR_STRENGTH et ACTIVE_INGRED_UNIT donnent les valeurs et unités des différentes substances 
+du produit. Ces détails très spécifiques ne semblent pas nous intéresser pour prédirer ses classes pharmaceutiques.
+
+L'attribut DEASCHEDULE exprime le degré de dangerosité d'un produit, cette information ne semble donc pas nécessaire.
+
+L'attribut NDC_EXCLUDE_FLAG indique une information si le produit a été retiré du marché par la FDA, ce qui ne nous aide
+pas pour la prédiction des classes pharmaceutiques. 
+
+L'attribut LISTING_RECORD_CERTIFIED_THROUGH donne l'information de la date de péremption du certificat du produit, nous
+décidons de ne pas le garder.
+
+Les attributs PACKAGEDESCRIPTION et SAMPLE_PACKAGE présentent des informations sur le type de contenants du produit, 
+qui ne nous seront pas utile.
+
+Voici notre ensemble d'attributs choisis:
+SUBSTANCENAME, DOSAGEFORMNAME, ROUTENAME, MARKETINGCATEGORYNAME
 """
-# TODO FINIR BLABLA
 
 # %%
 """
-# Transformation en données numériques (après question 8)
-## Encodage onehot
+# Transformation en données numériques
+Comme ce sont des données catégorielles textuelles, on décide d'utiliser un encodage one-hot pour chacun de nos 
+attributs, ainsi que notre label à prédire.
 """
+
+# %%
+
+
+headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
+for header in headers:
+    onehot_encode(unified_tables, header)
 
 # %%
 
