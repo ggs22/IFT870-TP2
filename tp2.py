@@ -8,12 +8,19 @@ import os
 import pickle
 import tqdm
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import RidgeClassifierCV
+
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 
 # %%
 
-product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES', 'DEASCHEDULE']
+# TODO: remove DEASCHEDULE from encoding
+product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES',
+                             'DEASCHEDULE']
+# TODO: remove all package table encoding
 package_headers_to_encode = ['PACKAGEDESCRIPTION']
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
@@ -135,6 +142,7 @@ encoded_package_file = 'transformed_package_data.csv'
 
 product_encode_file_exist = False
 package_encode_file_exist = False
+
 
 def assert_table_completeness(table):
     empty_cells = table.shape[0] - table.count(axis=0)
@@ -825,9 +833,7 @@ for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
-
 package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
-
 
 # %%
 """
@@ -1051,7 +1057,6 @@ for (c, r) in zip(cols, reg):
 unified_tables = unified_tables.rename(columns={'PRODUCTID': 'SPLID',
                                                 'NDCPACKAGECODE': 'PACKAGECODE'})
 
-
 # %%
 
 print('Voici donc notre nouvel ensemble d\'attribut:')
@@ -1137,13 +1142,12 @@ attributs, ainsi que notre label à prédire.
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
 
-
 to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
 
-unified_tables = unified_tables.dropna(axis = 0, subset = ['PHARM_CLASSES'])
+unified_tables = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 unified_tables.update(unified_tables)
 
-for header in product_headers_to_encode:
+for header in headers:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=unified_tables, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
@@ -1192,15 +1196,42 @@ for header in product_headers_to_encode:
 
 # %%
 """
-## Résultats
+# 9. Modèle de classification 
 """
 
 # %%
-# print('Encoded product data:')
-# print(product)
-# product
-#
-# # %%
-# print('Encoded packaging data:')
-# print(package)
-# package
+
+y_header = 'PHARM_CLASSES'
+headers.pop(y_header)
+X_headers = headers
+
+# TODO: get one hot values for X_headers, y_header
+X = 0
+y = 0
+
+clfs = {'Random Forest classifier': RandomForestClassifier(max_depth=2, random_state=0),
+        'Multi-layer Perceptron classifier': MLPClassifier(alpha=1, max_iter=1000),
+        'Ridge classifier (Cross-Validation)': RidgeClassifierCV(alphas=[1e-3, 1e-2, 1e-1, 1])}
+best_clf = {'name': '', 'score': 0, 'model': None}
+for name, clf in clfs.items():
+    clf.fit(X, y)
+    print(f'{name} : {clf.feature_importances_}')
+    score = clf.score(X, y)
+    print(f'Score : {score}')
+    if score > best_clf.get('score'):
+        best_clf['name'] = name
+        best_clf['score'] = score
+        best_clf['model'] = clf
+
+print(f"Le meilleur modèle trouvé est: {best_clf.get('name')}, avec un score de {best_clf.get('score')}")
+
+# %%
+"""
+10. Prédictions
+"""
+
+
+# TODO: get one hot encoding values to predict
+predictions = best_clf.get('model').predict(to_predict)
+# TODO: get categorial values from one hot values
+# TODO: insert categorial values in unified_tables
