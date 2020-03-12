@@ -1129,7 +1129,7 @@ for header in headers:
 # %%
 
 y_header = 'PHARM_CLASSES'
-headers.pop(y_header)
+headers.remove(y_header)
 X_headers = headers
 
 # TODO: check: get values for X_headers, y_header
