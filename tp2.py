@@ -223,11 +223,12 @@ def onehot_encode(table, header):
         if type(table.loc[index, header]) is str:
             for decomposed in re.split(custom_sep, table.loc[index, header]):
                 # _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-                if not np.int_(encoder_dict[header].transform([[decomposed]]).shape[1]) in lst:
-                    lst.append(np.int_(encoder_dict[header].transform([[decomposed]]).shape[1]))
+                if not np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]) in lst:
+                    lst.append(np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]))
             # lst.append(_tmp)
 
         # Update loading bar
+        #TODO fix 100000000% caused by sparse indexing after droping NA - not that important
         if count == 1000:
             progress(index, table.shape[0])
             count = 0
@@ -819,7 +820,6 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 tmp_prod_duplicated = product.copy()
 tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
 
 for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
