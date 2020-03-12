@@ -974,7 +974,7 @@ unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMA
 Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
  tables product et package originales.
 """
-
+# TODO: check unicité des lignes via PRODUCTID et NDCPACKAGECODE
 # %%
 """
 # 7. Proposition d'un ensemble d'attributs éliminant redondance 
@@ -1091,22 +1091,14 @@ SUBSTANCENAME, DOSAGEFORMNAME, ROUTENAME, MARKETINGCATEGORYNAME
 """
 # Transformation en données numériques
 Comme ce sont des données catégorielles textuelles, on décide d'utiliser un encodage one-hot pour chacun de nos 
-attributs, ainsi que notre label à prédire.
+attributs, ainsi que notre label à prédire. Or comme les valeurs de l'attribut PHARM_CLASS présentent des valeurs 
+multiples, afin de sauvegarder de la mémoire, au lieu de stocker les vecteurs one hot éparses, on décide de sauvegarder
+plutôt les indexes des bits à 1.
 """
 
 # %%
 
-# tmp_prod_duplicated = product.copy()
-# tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-# tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
-#
-# for header in product_headers_to_encode:
-#     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
-#     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
-
-to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
 
 unified_tables = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 unified_tables.update(unified_tables)
@@ -1115,49 +1107,7 @@ for header in headers:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=unified_tables, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
-# %%
-
-# Call and time onehot encoding for all predefined columns
-# if not os.path.isdir(encoder_dir):
-#     os.mkdir(encoder_dir)
-# if not product_encode_file_exist:
-#     for header in product_headers_to_encode:
-#         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product, header=header)))
-#         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-#                     pickle.HIGHEST_PROTOCOL)
-#
-# # if not package_encode_file_exist:
-# #     for header in package_headers_to_encode:
-# #         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
-# #         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-# #                     pickle.HIGHEST_PROTOCOL)
-#
-# if not os.path.isdir(encoding_dir):
-#     {os.mkdir(encoding_dir)}
-# # Prints out encding of each category for a given column in a txt file
-# for header, enc in enc_dic.items():
-#     file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
-#     for category in enc.categories_[0]:
-#         tmp_str = str(enc.transform([[category]]).toarray())
-#         tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
-#         file.write(tmp_str)
-#     file.close()
-#
-# # Save transformed data to file
-# if not product_encode_file_exist:
-#     time_methode(product.to_csv, **(dict(path_or_buf=encoded_product_file,
-#                                          index=False,
-#                                          sep=separ,
-#                                          encoding=target_encoding,
-#                                          quoting=csv.QUOTE_NONNUMERIC)))
-#
-# if not product_encode_file_exist:
-#     time_methode(package.to_csv, **(dict(path_or_buf=encoded_package_file,
-#                                          index=False,
-#                                          sep=separ,
-#                                          encoding=target_encoding,
-#                                          quoting=csv.QUOTE_NONNUMERIC)))
-
+# TODO: split one hot values
 # %%
 """
 # 9. Modèle de classification 
@@ -1169,9 +1119,9 @@ y_header = 'PHARM_CLASSES'
 headers.pop(y_header)
 X_headers = headers
 
-# TODO: get one hot values for X_headers, y_header
-X = 0
-y = 0
+# TODO: check: get values for X_headers, y_header
+X = unified_tables[X_headers].to_numpy()
+y = unified_tables[y_header].to_numpy()
 
 clfs = {'Random Forest classifier': RandomForestClassifier(max_depth=2, random_state=0),
         'Multi-layer Perceptron classifier': MLPClassifier(alpha=1, max_iter=1000),
@@ -1194,8 +1144,14 @@ print(f"Le meilleur modèle trouvé est: {best_clf.get('name')}, avec un score d
 10. Prédictions
 """
 
+to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
+# TODO: check : get one hot indexes encoding values to predict
+for index, p in to_predict.iterrows():
+    for header in X_headers:
+        to_predict.at[index, header] = enc_dic[header].transform(p[header])
 
-# TODO: get one hot encoding values to predict
 predictions = best_clf.get('model').predict(to_predict)
 # TODO: get categorial values from one hot values
 # TODO: insert categorial values in unified_tables
+
+# TODO: CoNcLuSiOn AvEc GoOgLe
