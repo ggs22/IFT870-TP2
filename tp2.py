@@ -8,10 +8,16 @@ import os
 import pickle
 import tqdm
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import RidgeClassifierCV
+
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
 
 # %%
+
+product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 
@@ -127,11 +133,6 @@ package_file = 'Package.csv'
 encoder_dir = 'encoders/'
 encoding_dir = 'enconding_dic/'
 
-encoded_product_file = 'transformed_product_data.csv'
-encoded_package_file = 'transformed_package_data.csv'
-
-product_encode_file_exist = False
-package_encode_file_exist = False
 
 def assert_table_completeness(table):
     empty_cells = table.shape[0] - table.count(axis=0)
@@ -287,44 +288,10 @@ def date_convert_back(table, dc):
             table[c][index] = pd.Timestamp(table[c][index])
 
 
-"""
-Load data:
-    Will look for existing files to deserialize prior encoding data. If the files are not found
-    it will proceed with the original data through encoding.
-"""
-product_encode_file_exist = os.path.isfile(encoded_product_file)
-package_encode_file_exist = os.path.isfile(encoded_package_file)
-
 enc_dic = {}
 
-original_product_data = pd.read_csv(product_file, sep=';', encoding='latin1').copy()
-original_package_data = pd.read_csv(package_file, sep=';', encoding='latin1').copy()
-
-# %%
-
-if product_encode_file_exist:
-    print('Loading encoded product data from existing file...')
-    product = pd.read_csv(encoded_product_file, sep=separ, encoding=target_encoding)
-
-    # # Convert back date from string to timestamp
-    # TODO date conversion cause conflict when loading back data
-    # time_methode(date_convert_back, **dict(table=product, dc=date_cols))
-
-    # Populate onehot encoders dictionnary
-    # for header in product_headers_to_encode:
-    #     enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
-else:
-    product = original_product_data
-
-if package_encode_file_exist:
-    print('Loading encoded package data from existing file...')
-    package = pd.read_csv(encoded_package_file, sep=separ, encoding=target_encoding)
-
-    # # Populate onehot encoders dictionnary
-    # for header in package_headers_to_encode:
-    #     enc_dic[header] = pickle.load(open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'rb'))
-else:
-    package = original_package_data
+product = pd.read_csv(product_file, sep=';', encoding='latin1').copy()
+package = pd.read_csv(package_file, sep=';', encoding='latin1').copy()
 
 # Make everything lower characters in both tables
 df_to_lower(product)
@@ -333,35 +300,9 @@ df_to_lower(package)
 # %%
 """
 # 1. Auscultation
-Nous avons déjà prétraitées les données (passage en minuscules des données textuelles) afin de minimiser l'inconsistance
+Nous avons déjà prétraitées les données (passage de toutes les données en minuscules) afin de minimiser l'inconsistance
 entre les valeurs.
 
-## Etude des données du fichier 'package'
-"""
-
-# %%
-print('Assessing completeness of packaging data table')
-assert_table_completeness(package)
-
-# %%
-"""
-La colonne PRODUCTID ne présente pas de valeurs manquantes. Celle-ci fournit les valeurs concaténées de 
-code produit NDC et de l'identifiant SPL. Cependant, la colonne PRODUCTNDC présente quant à elle 1500 valeurs manquantes
-. On remarque également des valeurs aberrantes dans ses valeurs.
-
-Les valeurs manquantes des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non 
-bloquantes. Ces deux dernières colonnes sont de type date.
-
-La colonne PACKAGEDESCRIPTION est présentée sous forme de phrase et contient de multiples informations: le type de 
-volume, sa valeur et son unité. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur 
-'>' de manière hiérarchique.
-
-Les colonnes NDC_EXCLUDE_FLAG et SAMPLE_PACKAGE, présentant peu de valeurs différentes, et sont facilement 
-traitables numériquement.
-"""
-
-# %%
-"""
 ## Etude des données du fichier 'product'
 """
 
@@ -424,26 +365,23 @@ lorsqu'on fait abstraction des permutations:
 
 # %%
 print('Actual unique values for ROUTENAME')
-product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
+product_unique_values = get_decomposed_uniques(product, 'ROUTENAME')
 print(product_unique_values)
 
 print('Actual unique values for PHARM_CLASSES')
-product_unique_values = get_decomposed_uniques(original_product_data, 'PHARM_CLASSES')
+product_unique_values = get_decomposed_uniques(product, 'PHARM_CLASSES')
 print(product_unique_values)
 
 print('Actual unique values for ACTIVE_INGREDIENT_UNIT')
-product_unique_values = get_decomposed_uniques(original_product_data, 'ACTIVE_INGRED_UNIT')
+product_unique_values = get_decomposed_uniques(product, 'ACTIVE_INGRED_UNIT')
 print(product_unique_values)
 
 print('Actual unique values for ACTIVE_NUMERATOR_STRENGTH')
-product_unique_values = get_decomposed_uniques(original_product_data, 'ACTIVE_NUMERATOR_STRENGTH')
+product_unique_values = get_decomposed_uniques(product, 'ACTIVE_NUMERATOR_STRENGTH')
 print(product_unique_values)
 
 # %%
-product_unique_values = print(product['LABELERNAME'][7252:7255])
-print(product_unique_values)
-
-# %%
+print('Example of values for LABELERNAME')
 print(product['LABELERNAME'][7252:7255])
 
 # %%
@@ -477,11 +415,38 @@ documentation. Il n'y a pas de valeur manquante.
 print(product['NDC_EXCLUDE_FLAG'].value_counts())
 
 # %%
-# TODO: reviw sérieusement :/
+"""
+## Etude des données du fichier 'package'
+"""
+
+# %%
+print('Etude de la complétude des données de la table package')
+assert_table_completeness(package)
+
+# %%
+"""
+La colonne PRODUCTID ne présente pas de valeurs manquantes. Celle-ci fournit les valeurs concaténées de 
+code produit NDC et de l'identifiant SPL. 
+
+Cependant, la colonne PRODUCTNDC présente quant à elle 1500 valeurs manquantes. On remarque également des valeurs 
+aberrantes dans ses valeurs.
+
+Les valeurs manquantes des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE sont plus nombreuses mais semblent être non 
+bloquantes. Ces deux dernières colonnes sont de type date.
+
+La colonne PACKAGEDESCRIPTION est présentée sous forme de phrase et contient de multiples informations: le type de 
+volume, sa valeur et son unité. S'il existe plusieurs contenants pour un objet, ils sont concaténés par un séparateur 
+'>' de manière hiérarchique.
+
+Les colonnes NDC_EXCLUDE_FLAG et SAMPLE_PACKAGE, présentant peu de valeurs différentes, et sont facilement 
+traitables numériquement.
+"""
+
+# %%
 """
 # 2. Relations entre attributs
 ## Informations communes
-Les colonnes 'PRODUCTID' des tables 'package' et 'product' contiennent deux informations concaténées: l'id du produit 
+Les colonnes 'PRODUCTID' des tables 'package' et 'product' contiennent deux informations concaténées: l'idenfiant SPL 
 ainsi que le contenu de leur colonne 'PRODUCTNDC', le code label et le code segment produit.  
 Dans la documentation NDC, il est précisé que c'est pour prévenir le duplicata de lignes.
 
@@ -496,16 +461,25 @@ La colonne 'APPLICATIONNUMBER' de la table 'product' présente la majorité du t
 'MARKETINGCATEGORYNAME' et spécifie son numéro de série.
 
 Dans les deux tables, il existe des colonnes 'STARTMARKETINGDATE',  'ENDMARKETINGDATE' et 'NDCEXLUDEDFLAG'. 
-Elles semblent présenter les mêmes informations.
+Elles semblent présenter les mêmes informations entres les tables.
 
 ## Corrélation
-Pour la table 'product':
-Il semble pouvoir exister une corrélation entre les attributs 'ROUTENAME' et 'DOSAGEFORMNAME' qui présentent des idées 
-d'administration similaires. 
-On peut également considérer l'existance d'une corrélation entre les modes d'administration
-et les dosages du médicament, donc les attributs 'ROUTENAME', 'DOSAGEFORMNAME' et ceux 'ACTIVE_NUMERATOR_STRENGTH', 
-'ACTIVE_INGRED_UNIT'.
-L'attribut 'PHARM_CLASS' semble pouvoir être corrélé à l'attribut 'SUBSTANCENAME'.
+Comme le précise la documentation, les valeurs de l'attribut 'PHARM_CLASS' de la table produtc découlent des valeurs de 
+l'attribut 'SUBSTANCENAME'. La corrélation entre ces deux attributs est donc évidente.
+
+Il semble pouvoir exister une corrélation entre les attributs 'ROUTENAME' et 'DOSAGEFORMNAME' de la table produt. En 
+effet, ROUTENAME présente le mode d'administration du produit et DOSAGEFORMNAME la forme du dosage. Ces idées 
+d'administration se présentent donc similaires. 
+
+L'attribut MARKETINGCATEGORYNAME de la table produtct présente de manière assez générale la catégorie du produit, cela 
+peut donc donner des informations sur le type de médicament, qui peut être représenté conjointement par les attributs 
+PHARM_CLASSES, SUBSTANCENAME de la table product.
+
+Dans la table package, l'attribut PACKAGEDESCRIPTION fournit des informations sur les volumes des différents contenants
+du produit médicamenteux. On pourrait supposer alors une corrélation entre les modes d'administration et les formes du
+dosage (en fonction du mode d'administration, le contenant peut être plus ou moins volumineux, etc). L'attribut  
+PACKAGEDESCRIPTION de la table package pourrait être corrélé aux attributs ROUTENAME et DOSAGEFORMNAME de la table 
+product.
 """
 
 # %%
@@ -530,8 +504,7 @@ def date_convert(table, dc):
 
 # TODO date conversion cause conflict when loading back data
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
-if not product_encode_file_exist:
-    date_convert(product, date_cols)
+date_convert(product, date_cols)
 
 # %%
 """
@@ -552,8 +525,7 @@ colonne est passée. En l'occurence, il n'y a uncun produit dont la date d'éch�
 """
 
 # %%
-# TODO #1 there is no LISTING_RECORD_CERTIFIED_THROUGH prior to 31-12-2021 and date conversion cause a conflict when loading back files...
-# TODO #2 check fix
+
 nb = (product['LISTING_RECORD_CERTIFIED_THROUGH'] < datetime.now()).sum()
 print(f'Nombre d\'incohérences pour l\'attribut LISTING_RECORD_CERTIFIED_THROUGH: {nb}')
 
@@ -580,18 +552,18 @@ check = lambda row: values_count(row, "SUBSTANCENAME") == values_count(row, "ACT
 nb_valid = len(product.apply(check, axis=1))
 print(f"Nombre d'incohérences entre ces 3 colonnes: {product.shape[0] - nb_valid}")
 
-# TODO: print outliers PRODUCTNDC dans product
-
 # %%
 """
 La colonne PRODUCTNDC présente certaines valeurs aberrantes que nous décidons de récupérer de la première
-partie de la valeur du PRODUCTID associée. En effet, celuLISTING_RECORD_CERTIFIED_THROUGHi-ci étant un duplicata, celui-ci peut être considéré comme 
+partie de la valeur du PRODUCTID associée. En effet, celui-ci étant un duplicata, celui-ci peut être considéré comme 
 correct.
 """
 
 
 # %%
 
+print('Valeurs aberrantes dans PRODUCTNDC de la table product:')
+print(product['PRODUCTNDC'][229:233])
 
 def replace_outliers_productndc(table):
     outliers = table['PRODUCTNDC'][~table['PRODUCTNDC'].str.contains(r'\d{4,5}-\d{3,4}', regex=True, na=False)]
@@ -629,6 +601,7 @@ def check_dict_categories(table, column_name, standard):
 
 
 # %%
+
 cols = ['DEASCHEDULE', 'NDC_EXCLUDE_FLAG', 'ROUTENAME', 'MARKETINGCATEGORYNAME']
 standards = [standard_deaschedule, standard_ndcexcludeflag, standard_routename, standard_marketingcategoryname]
 for (col_name, stand) in zip(cols, standards):
@@ -657,6 +630,7 @@ On choisit de les résumer par leur caractéristique principale.
 """
 
 # %%
+
 standard_dosageformname_lower = dict((k.lower(), v.lower()) for k, v in standard_dosageformname.items())
 product['DOSAGEFORMNAME'] = product['DOSAGEFORMNAME'].replace(standard_dosageformname_lower)
 
@@ -667,16 +641,13 @@ assert_table_completeness(product)
 # %%
 """
 ## Table 'package'
-
 Traitement des colonnes STARTMARKETINGDATE et ENDMARKETINGDATE similairement à la table 'product'.
 """
 
 # %%
 
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE']
-# TODO data conversion causes conflist when loading data back
-if not package_encode_file_exist:
-    date_convert(package, date_cols)
+date_convert(package, date_cols)
 
 # compare STARTMARKETINGDATE and ENDMARKETINGDATE
 nb = package[package['STARTMARKETINGDATE'] > package['ENDMARKETINGDATE']].shape[0]
@@ -734,8 +705,10 @@ On remarque que les valeurs de la colonne NDCPACKAGECODE ne répondent pas toute
 """
 
 # %%
+
 val_bad_formatting = package[~package['NDCPACKAGECODE'].str.contains(r'\d{4,5}-\d{3,4}-\d{1,2}', regex=True, na=False)]
 val_bad_formatting['NDCPACKAGECODE']
+
 
 # %%
 """
@@ -769,12 +742,11 @@ def replace_missing_values(table, col_name_1, col_name_2, regex):
         package.loc[index, col_name_1] = row[0]
 
 
-if not package_encode_file_exist:
-    replace_missing_values(package, 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', r'\((.*?)\).*')
+replace_missing_values(package, 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', r'\((.*?)\).*')
 
 # %%
-if not package_encode_file_exist:
-    replace_missing_values(package, 'PRODUCTNDC', 'NDCPACKAGECODE', r'^([\w]+-[\w]+)')
+
+replace_missing_values(package, 'PRODUCTNDC', 'NDCPACKAGECODE', r'^([\w]+-[\w]+)')
 
 # %%
 
@@ -820,16 +792,13 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 tmp_prod_duplicated = product.copy()
 tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-
-product_headers_to_encode = ['ROUTENAME', 'DOSAGEFORMNAME', 'SUBSTANCENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES', 'DEASCHEDULE']
+tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
 
 for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
-
 package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
-
 
 # %%
 """
@@ -922,6 +891,7 @@ Les valeurs de l'attribut PRODUCTNDC devraient également être uniques entre el
 
 d = product[product.duplicated(['PRODUCTNDC'], keep=False)]
 print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTNDC: {len(d)}')
+
 # %%
 """
 # 6. Intégration des tables
@@ -929,6 +899,7 @@ On se rend compte qu'un objet dans la table package ne dispose pas de son équiv
 """
 
 # %%
+
 d = package[~package['PRODUCTID'].isin(product['PRODUCTID'])]['PRODUCTID'].values[0]
 print(f'Objet de package dont PRODUCTID est manquant dans product: {d}')
 
@@ -939,6 +910,7 @@ modèle de prédiction.
 """
 
 # %%
+
 unified_tables = pd.merge(product, package, on='PRODUCTID')
 
 print(unified_tables)
@@ -1007,7 +979,7 @@ unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMA
 Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
  tables product et package originales.
 """
-
+# TODO: check unicité des lignes via PRODUCTID et NDCPACKAGECODE
 # %%
 """
 # 7. Proposition d'un ensemble d'attributs éliminant redondance 
@@ -1042,6 +1014,7 @@ def remove_content_from_attribute(attribute, regex):
 
 
 # %%
+
 cols = ['PRODUCTID', 'NDCPACKAGECODE', 'PACKAGEDESCRIPTION', 'APPLICATIONNUMBER']
 reg = [r'\d{4,5}-\d{3,4}_', r'\d{4,5}-\d{3,4}-', r'\(\d{4,5}-\d{3,4}-\d{2}\) ', r'[a-zA-Z]']
 
@@ -1052,7 +1025,6 @@ for (c, r) in zip(cols, reg):
 
 unified_tables = unified_tables.rename(columns={'PRODUCTID': 'SPLID',
                                                 'NDCPACKAGECODE': 'PACKAGECODE'})
-
 
 # %%
 
@@ -1124,7 +1096,9 @@ SUBSTANCENAME, DOSAGEFORMNAME, ROUTENAME, MARKETINGCATEGORYNAME
 """
 # Transformation en données numériques
 Comme ce sont des données catégorielles textuelles, on décide d'utiliser un encodage one-hot pour chacun de nos 
-attributs, ainsi que notre label à prédire.
+attributs, ainsi que notre label à prédire. Or comme les valeurs de l'attribut PHARM_CLASS présentent des valeurs 
+multiples, afin de sauvegarder de la mémoire, au lieu de stocker les vecteurs one hot éparses, on décide de sauvegarder
+plutôt les indexes des bits à 1.
 """
 
 # %%
@@ -1139,70 +1113,58 @@ attributs, ainsi que notre label à prédire.
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
 
-
-to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
-
-unified_tables = unified_tables.dropna(axis = 0, subset = ['PHARM_CLASSES'])
+unified_tables = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 unified_tables.update(unified_tables)
 
-for header in product_headers_to_encode:
+for header in headers:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=unified_tables, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
-# %%
-
-# Call and time onehot encoding for all predefined columns
-# if not os.path.isdir(encoder_dir):
-#     os.mkdir(encoder_dir)
-# if not product_encode_file_exist:
-#     for header in product_headers_to_encode:
-#         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=product, header=header)))
-#         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-#                     pickle.HIGHEST_PROTOCOL)
-#
-# # if not package_encode_file_exist:
-# #     for header in package_headers_to_encode:
-# #         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=package, header=header)))
-# #         pickle.dump(enc_dic[header], open(encoder_dir + '{}_data_encoder.pkl'.format(header), 'wb'),
-# #                     pickle.HIGHEST_PROTOCOL)
-#
-# if not os.path.isdir(encoding_dir):
-#     {os.mkdir(encoding_dir)}
-# # Prints out encding of each category for a given column in a txt file
-# for header, enc in enc_dic.items():
-#     file = open(encoding_dir + 'Encoding_{}.txt'.format(header), 'w')
-#     for category in enc.categories_[0]:
-#         tmp_str = str(enc.transform([[category]]).toarray())
-#         tmp_str = category + ' ' * (40 - len(category)) + tmp_str.replace('\n', '\n' + ' ' * 40) + '\n'
-#         file.write(tmp_str)
-#     file.close()
-#
-# # Save transformed data to file
-# if not product_encode_file_exist:
-#     time_methode(product.to_csv, **(dict(path_or_buf=encoded_product_file,
-#                                          index=False,
-#                                          sep=separ,
-#                                          encoding=target_encoding,
-#                                          quoting=csv.QUOTE_NONNUMERIC)))
-#
-# if not product_encode_file_exist:
-#     time_methode(package.to_csv, **(dict(path_or_buf=encoded_package_file,
-#                                          index=False,
-#                                          sep=separ,
-#                                          encoding=target_encoding,
-#                                          quoting=csv.QUOTE_NONNUMERIC)))
-
+# TODO: split one hot values
 # %%
 """
-## Résultats
+# 9. Modèle de classification 
 """
 
 # %%
-# print('Encoded product data:')
-# print(product)
-# product
-#
-# # %%
-# print('Encoded packaging data:')
-# print(package)
-# package
+
+y_header = 'PHARM_CLASSES'
+headers.pop(y_header)
+X_headers = headers
+
+# TODO: check: get values for X_headers, y_header
+X = unified_tables[X_headers].to_numpy()
+y = unified_tables[y_header].to_numpy()
+
+clfs = {'Random Forest classifier': RandomForestClassifier(max_depth=2, random_state=0),
+        'Multi-layer Perceptron classifier': MLPClassifier(alpha=1, max_iter=1000),
+        'Ridge classifier (Cross-Validation)': RidgeClassifierCV(alphas=[1e-3, 1e-2, 1e-1, 1])}
+best_clf = {'name': '', 'score': 0, 'model': None}
+for name, clf in clfs.items():
+    clf.fit(X, y)
+    print(f'{name} : {clf.feature_importances_}')
+    score = clf.score(X, y)
+    print(f'Score : {score}')
+    if score > best_clf.get('score'):
+        best_clf['name'] = name
+        best_clf['score'] = score
+        best_clf['model'] = clf
+
+print(f"Le meilleur modèle trouvé est: {best_clf.get('name')}, avec un score de {best_clf.get('score')}")
+
+# %%
+"""
+10. Prédictions
+"""
+
+to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
+# TODO: check : get one hot indexes encoding values to predict
+for index, p in to_predict.iterrows():
+    for header in X_headers:
+        to_predict.at[index, header] = enc_dic[header].transform(p[header])
+
+predictions = best_clf.get('model').predict(to_predict)
+# TODO: get categorial values from one hot values
+# TODO: insert categorial values in unified_tables
+
+# TODO: CoNcLuSiOn AvEc GoOgLe
