@@ -214,8 +214,8 @@ def get_onehot_encoders(table, cols):
     for col in cols:
         uniques_vals = get_decomposed_uniques(table, header=col)
         enc = OneHotEncoder(handle_unknown='ignore', dtype=int)
-        enc.fit_transform(uniques_vals)
-        encoder_dict[   col] = enc
+        enc.fit(uniques_vals)
+        encoder_dict[col] = enc
     return encoder_dict
 
 
@@ -229,8 +229,10 @@ def onehot_encode(table, header):
         _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         if type(table.loc[index, header]) is str:
             for decomposed in re.split(custom_sep, table.loc[index, header]):
-                _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
-            lst.append(_tmp)
+                # _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
+                if not np.int_(encoder_dict[header].transform([[decomposed]]).shape[1]) in lst:
+                    lst.append(np.int_(encoder_dict[header].transform([[decomposed]]).shape[1]))
+            # lst.append(_tmp)
 
         # Update loading bar
         if count == 1000:
@@ -804,13 +806,16 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 # %%
 
-tmp_prod_duplicated = product
+tmp_prod_duplicated = product.dropna(axis = 0, subset = ['PHARM_CLASSES'])
+tmp_prod_duplicated.update(tmp_prod_duplicated)
+
 for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
 
-ackage_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
+package_duplicated = package[package.duplicated(['NDCPACKAGECODE'], keep=False)].copy()
+
 
 # %%
 """
