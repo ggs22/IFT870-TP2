@@ -1150,10 +1150,7 @@ def multiple_values_to_col(table, headers):
 def convert_table_indexes_scalar_to_multiple_col(table, headers):
     convert_scalar_to_string(table, headers)
     table = multiple_values_to_col(table, headers)
-    if len(headers) > 1:
-        table = table.drop([headers], axis=1)
-    else:
-        table = table.drop(headers, axis=1)
+    table = table.drop(headers, axis=1)
     table = table.dropna(how='all')  # TODO: remove fix
     table.fillna(value=0, inplace=True)
     table = table.apply(pd.to_numeric)
