@@ -218,7 +218,7 @@ def onehot_encode(table, header):
     encoder_dict = get_onehot_encoders(table, [header])
 
     count = 0
-    for index in range(table.shape[0]):
+    for index in table.index.values:
         _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         if type(table.loc[index, header]) is str:
             for decomposed in re.split(custom_sep, table.loc[index, header]):
@@ -236,7 +236,7 @@ def onehot_encode(table, header):
     print(" -> Done", flush=True)
 
     # Replace dataframe column by encoded values
-    table.loc[:, header] = pd.Series(lst)
+    table.loc[header] = pd.Series(lst)
 
     # return the encoder associated to that particular header
     return encoder_dict[header]
@@ -422,7 +422,20 @@ lorsqu'on fait abstraction des permutations:
 """
 
 # %%
+print('Actual unique values for ROUTENAME')
 product_unique_values = get_decomposed_uniques(original_product_data, 'ROUTENAME')
+print(product_unique_values)
+
+print('Actual unique values for PHARM_CLASSES')
+product_unique_values = get_decomposed_uniques(original_product_data, 'PHARM_CLASSES')
+print(product_unique_values)
+
+print('Actual unique values for ACTIVE_INGREDIENT_UNIT')
+product_unique_values = get_decomposed_uniques(original_product_data, 'ACTIVE_INGRED_UNIT')
+print(product_unique_values)
+
+print('Actual unique values for ACTIVE_NUMERATOR_STRENGTH')
+product_unique_values = get_decomposed_uniques(original_product_data, 'ACTIVE_NUMERATOR_STRENGTH')
 print(product_unique_values)
 
 # %%
@@ -804,8 +817,9 @@ associés à un produit (PRODUCTID), cependant les code package doivent être un
 
 # %%
 
-tmp_prod_duplicated = product.dropna(axis = 0, subset = ['PHARM_CLASSES'])
-tmp_prod_duplicated.update(tmp_prod_duplicated)
+tmp_prod_duplicated = product.copy()
+tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
+tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
 
 for header in product_headers_to_encode:
     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
@@ -1113,10 +1127,25 @@ attributs, ainsi que notre label à prédire.
 
 # %%
 
+# tmp_prod_duplicated = product.copy()
+# tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
+# tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
+#
+# for header in product_headers_to_encode:
+#     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
+#     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
-for header in headers:
-    onehot_encode(unified_tables, header)
+
+
+to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
+
+unified_tables = unified_tables.dropna(axis = 0, subset = ['PHARM_CLASSES'])
+unified_tables.update(unified_tables)
+
+for header in product_headers_to_encode:
+    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=unified_tables, header=header)))
+    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
 # %%
 
