@@ -3,11 +3,6 @@
 import numpy as np
 import pandas as pd
 import re
-import csv
-import os
-import pickle
-import tqdm
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
