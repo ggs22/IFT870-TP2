@@ -9,9 +9,8 @@ import pickle
 import tqdm
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import RidgeClassifierCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.multioutput import MultiOutputClassifier
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
@@ -1104,18 +1103,9 @@ plutôt les indexes des bits à 1.
 
 # %%
 
-# tmp_prod_duplicated = product.copy()
-# tmp_prod_duplicated = tmp_prod_duplicated.dropna(axis=0, subset=['PHARM_CLASSES'])
-# tmp_prod_duplicated = tmp_prod_duplicated.reindex(index=range(tmp_prod_duplicated.shape[0]), copy=False)
-#
-# for header in product_headers_to_encode:
-#     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=tmp_prod_duplicated, header=header)))
-#     pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-#
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
-# only for test
-# headers = ['ROUTENAME']
 
+unified_tables = unified_tables[~unified_tables['PHARM_CLASSES'].str.match(r'epc')]
 labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 
 for header in headers:
@@ -1130,12 +1120,10 @@ if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
 else:
     unified_tables = pickle.load(open(encoding_dir + 'unified_tables.pkl', 'rb'))
 
-# TODO: split one hot values
 # %%
 """
 # 9. Modèle de classification 
 """
-
 
 # %%
 
@@ -1156,14 +1144,11 @@ def multiple_values_to_col(table, headers):
 
 def convert_table_indexes_scalar_to_multiple_col(table, headers):
     convert_scalar_to_string(table, headers)
-    table = multiple_values_to_col(table, headers)
-    table = table.drop(headers, axis=1)
-    table = table.dropna(how='all')  # TODO: remove fix
+    table = multiple_values_to_col(table, headers).drop(headers, axis=1).dropna(how='all')
     table.fillna(value=0, inplace=True)
     table = table.apply(pd.to_numeric)
-    table = table.values
+    return table.values
 
-    return table
 
 # %%
 
@@ -1178,61 +1163,22 @@ y = labelled_data[y_header]
 X = convert_table_indexes_scalar_to_multiple_col(X, X_headers)
 y = convert_table_indexes_scalar_to_multiple_col(y, y_header)
 
-# convert_scalar_to_string(X, X_headers)
-# convert_scalar_to_string(y, y_header)
-#
-# X = multiple_values_to_col(X, X_headers)
-# y = multiple_values_to_col(y, y_header)
-#
-# X = X.drop([X_headers], axis=1)
-# y = y.drop(y_header, axis=1)
-#
-# # TODO: remove fix
-# X = X.dropna(how='all')
-# y = y.dropna(how='all')
-#
-# X.fillna(value=0, inplace=True)
-# y.fillna(value=0, inplace=True)
-#
-# X = X.apply(pd.to_numeric)
-# y = y.apply(pd.to_numeric)
-#
-# X = X.values
-# y = y.values
-
 # %%
 
-clfs = {'Random Forest classifier': RandomForestClassifier(max_depth=2, random_state=0)
-        # ,
-        #    'Multi-layer Perceptron classifier': MLPClassifier(alpha=1, max_iter=1000),
-        #    'Ridge classifier (Cross-Validation)': RidgeClassifierCV(alphas=[1e-3, 1e-2, 1e-1, 1])
-        }
-best_clf = {'name': '', 'score': 0, 'model': None}
-for name, clf in clfs.items():
-    clf.fit(X, y)
-    print(f'{name} : {clf.feature_importances_}')
-    score = clf.score(X, y)
-    print(f'Score : {score}')
-    # if score > best_clf.get('score'):
-    #     best_clf['name'] = name
-    #     best_clf['score'] = score
-    #     best_clf['model'] = clf
+knn = KNeighborsClassifier(n_neighbors=2)
+classifier = MultiOutputClassifier(knn, n_jobs=-1)
+classifier.fit(X, y)
+predictions = classifier.predict(X)
+classifier.score(X, y)
 
-print(f"Le meilleur modèle trouvé est: {best_clf.get('name')}, avec un score de {best_clf.get('score')}")
+score = classifier.score(X, y)
+print(f'Score : {score}')
+
+# classifier.predict(vectorizer.transform(test_data))
+
 
 # %%
 """
-10. Prédictions
+10. Conclusions
 """
-
-# to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
-# # TODO: check : get one hot indexes encoding values to predict
-# for index, p in to_predict.iterrows():
-#     for header in X_headers:
-#         to_predict.at[index, header] = enc_dic[header].transform(p[header])
-#
-# predictions = best_clf.get('model').predict(to_predict)
-# # TODO: get categorial values from one hot values
-# # TODO: insert categorial values in unified_tables
-#
 # # TODO: CoNcLuSiOn AvEc GoOgLe
