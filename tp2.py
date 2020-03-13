@@ -7,6 +7,7 @@ import csv
 import os
 import pickle
 import tqdm
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
@@ -1127,7 +1128,7 @@ for header in headers:
 if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
     pickle.dump(unified_tables, open(encoding_dir + 'unified_tables.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 else:
-    unified_tables = pickle.laod(open(encoding_dir + 'unified_tables.pkl', 'rb'))
+    unified_tables = pickle.load(open(encoding_dir + 'unified_tables.pkl', 'rb'))
 
 # TODO: split one hot values
 # %%
