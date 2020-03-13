@@ -8,6 +8,7 @@ import os
 import pickle
 import tqdm
 
+from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
 
@@ -1165,17 +1166,23 @@ X = convert_table_indexes_scalar_to_multiple_col(X, X_headers)
 y = convert_table_indexes_scalar_to_multiple_col(y, y_header)
 
 # %%
-# TODO: add test train split
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+"""
+On sépare les données labellisées en ensemble d'entraînement et de test.
+"""
+
+# %%
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 knn = KNeighborsClassifier(n_neighbors=2)
 classifier = MultiOutputClassifier(knn, n_jobs=-1)
-classifier.fit(X, y)
-predictions = classifier.predict(X)
-classifier.score(X, y)
+classifier.fit(X_train, y_train)
+train_score = classifier.score(X_train, y_train)
+print(f'Score d\'entraînement: {train_score}')
 
-score = classifier.score(X, y)
-print(f'Score : {score}')
+test_predictions = classifier.predict(X_test)
+test_score = classifier.score(X_test, y_test)
+print(f'Score de test: {test_score}')
+
 
 # %%
 """
@@ -1184,8 +1191,9 @@ On s'intéresse maintenant à la prédiction des objets où les valeurs de l'att
 
 # %%
 
-# classifier.predict(vectorizer.transform(test_data))
+to_predict
 
+test_predictions = classifier.predict(to_predict)
 
 # %%
 """
