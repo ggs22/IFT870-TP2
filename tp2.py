@@ -1207,11 +1207,34 @@ On s'intéresse maintenant à la prédiction des objets où les valeurs de l'att
 # %%
 
 test_predictions = classifier.predict(to_predict)
-for i in test_predictions.shape[0]:
-     predictions = enc_dic.categories_[0][test_predictions[i][np.where(test_predictions!=0)]]
+
+# %%
+"""
+À ce stage, avec les valeurs retournées par la prédiction, il suffit de récupérer les valeurs text de la colonne
+PHARM_CLASSES dans les encodeurs contenus dans enc_dic['PHARM_CLASSES']. Il suffiter d'aller chercher la valeur se
+trouvant à l'index prédit.
+"""
+
+
+# %%
+"""
+Nous étions en cours de validation les scores et les prédicitons pour KNN mais l'encodage et l'entrainement requiert
+trop de temps pour avoir les valeurs avant la limite de temps allouée pour la remise.
+
+Trois voisins donnaient 13% en entrainement et en test. Ce nombre de voisins a été discarté.
+
+Nous avons également atteint un score de 96% en test et 97% en entrainement avec 5 voisins.
+
+Le random forest avec une profondeur de trois a donné des résultats de 16% en entrainement 15% en test.
+
+Le temps requis est long.
+"""
+
 
 # %%
 """
 10. Conclusions
+À ce stage il aurait fallut valider les prédictions en effectuant des recherches à l'aide d'un moteur de recherche et
+pour valider que nos prédictions concordent avec les vraies classes pharmaceutiques des substances pour lesquelles nous
+auriont effectué les prédictions. Puisqu'il y avait des dizaines de milliers
 """
-# # TODO: CoNcLuSiOn AvEc GoOgLe
