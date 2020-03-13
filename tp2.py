@@ -135,6 +135,9 @@ encoding_dir = 'encoding_dic/'
 
 
 def assert_table_completeness(table):
+    """
+    Cette fonction donne un aperçu de la complétue d'un dataframe en termes de valeurs uniques et de valeurs nulle
+    """
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
 
@@ -143,6 +146,7 @@ def assert_table_completeness(table):
 
 
 def assert_product_id_completeness(table, header):
+
     empty_cells = table.shape[0] - table.count(axis=0)
     unique_values = table.nunique(axis=0)
 
@@ -173,6 +177,10 @@ def get_unique_values(table, headers=''):
 
 
 def df_to_lower(table, columns='all'):
+    """
+    Cette fonction convertir les caractères d'un dataframe en caractères minuscules a des fins de standardisation des
+    tables.
+    """
     cols = table.columns.values if columns == 'all' else columns
     for c in cols:
         try:
@@ -182,6 +190,10 @@ def df_to_lower(table, columns='all'):
 
 
 def get_decomposed_uniques(table, header):
+    """
+    Cette fonction retourn les valeurs uniques décomposées. Elle utilise la fonction "unique" de pandas pour sortir les
+    valeurs uniques qui sont composées de permutation des vraies valeurs uniques séparées par des caractèrs de ponctuation.
+    """
     decomposed_uniques = {}
     if type(header) is str:
         for unique_header, uniques in get_unique_values(table, header).items():
@@ -201,6 +213,9 @@ def get_decomposed_uniques(table, header):
 
 
 def get_onehot_encoders(table, cols):
+    """
+    Cette fonction récupère les vraies valeurs uniques des dataframe et applique l'encodage one-hot pour chaque valeur
+    """
     encoder_dict = {}
     for col in cols:
         uniques_vals = get_decomposed_uniques(table, header=col)
@@ -211,7 +226,13 @@ def get_onehot_encoders(table, cols):
 
 
 def onehot_encode(table, header):
-    # Create onehot codes for the specidfied column
+    """
+    Cette fonction récupère les vraies valeurs uniques des dataframe et applique l'encodage one-hot pour chaque valeur.
+    Ces valeurs sont ajoutées à une liste, et la liste remplace les valeurs d'origine dans le dataframe. Ceci est fait
+    afin de rendre équivalent des valeurs telles que ORAL;INJECTION et INJECTION;ORAL et qu'elles aient le même encodage
+    one-hot
+    """
+
     lst = []
     lst2 = []
     encoder_dict = get_onehot_encoders(table, [header])
@@ -219,18 +240,15 @@ def onehot_encode(table, header):
     count, count2 = 0, 0
     for index in table.index.values:
         count2+=1
-        # _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         lst = []
         if type(table.loc[index, header]) is str:
             for decomposed in re.split(custom_sep, table.loc[index, header]):
-                # _tmp |= np.int_(encoder_dict[header].transform([[decomposed]]).toarray())
                 if not np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]) in lst:
                     lst.append(np.int_(encoder_dict[header].transform([[decomposed]]).indices[0]))
             lst.sort()
             lst2.append(lst)
 
         # Update loading bar
-        # TODO fix 100000000% caused by sparse indexing after droping NA - not that important
         if count == 1000:
             progress(count2, table.shape[0])
             count = 0
@@ -246,6 +264,13 @@ def onehot_encode(table, header):
 
 
 def time_methode(methode, status='', **kwargs):
+    """
+    Cette fonction récupère les vraies valeurs uniques des dataframe et applique l'encodage one-hot pour chaque valeur.
+    Ces valeurs sont ajoutées à une liste, et la liste remplace les valeurs d'origine dans le dataframe. Ceci est fait
+    afin de rendre équivalent des valeurs telles que ORAL;INJECTION et INJECTION;ORAL et qu'elles aient le même encodage
+    one-hot
+    """
+
     print('Timing {}'.format(methode.__name__))
     if status != '':
         print(status)
@@ -263,6 +288,10 @@ def time_methode(methode, status='', **kwargs):
 
 
 def progress(count, total, status=''):
+    """
+    Cette fonction sert à afficher la progression des encodages
+    """
+
     bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))
     _str = ''
@@ -282,13 +311,6 @@ def date_convert(table, dc):
     for c in dc:
         table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
 
-
-def date_convert_back(table, dc):
-    for c in dc:
-        for index, _ in table[c].items():
-            table[c][index] = pd.Timestamp(table[c][index])
-
-
 enc_dic = {}
 
 product = pd.read_csv(product_file, sep=';', encoding='latin1').copy()
@@ -297,6 +319,11 @@ package = pd.read_csv(package_file, sep=';', encoding='latin1').copy()
 # Make everything lower characters in both tables
 df_to_lower(product)
 df_to_lower(package)
+
+# conversion to datetime format
+def date_convert(table, dc):
+    for c in dc:
+        table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
 
 # %%
 """
@@ -495,15 +522,10 @@ On se rend compte de l'existence de données aberrantes que l'on décide d'ignor
 
 
 # %%
-# conversion to datetime format
-def date_convert(table, dc):
-    for c in dc:
-        table[c] = pd.to_datetime(table[c], errors='coerce', format='%Y%m%d')
 
 
 # %%
 
-# TODO date conversion cause conflict when loading back data
 date_cols = ['STARTMARKETINGDATE', 'ENDMARKETINGDATE', 'LISTING_RECORD_CERTIFIED_THROUGH']
 date_convert(product, date_cols)
 
@@ -978,10 +1000,7 @@ unified_tables = unified_tables.rename(columns={'STARTMARKETINGDATE_x': 'STARTMA
 """
 Notre dataframe intitulé unified_tables possède maintenant des attributs uniques résumant au mieux les données des
  tables product et package originales.
-"""
-# TODO: check unicité des lignes via PRODUCTID et NDCPACKAGECODE
-# %%
-"""
+
 # 7. Proposition d'un ensemble d'attributs éliminant redondance 
 
 L'attribut PRODUCTID concatène les valeur du code produit NDC et de l'identifiant du SPL. On peut donc éliminer 
@@ -1104,21 +1123,13 @@ plutôt les indexes des bits à 1.
 # %%
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
+labelled_data = unified_tables.dropna(subset=['PHARM_CLASSES'])
+labelled_data = labelled_data[labelled_data['PHARM_CLASSES'].str.contains(r'epc', regex=True)]
+to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
 
-unified_tables = unified_tables[~unified_tables['PHARM_CLASSES'].str.match(r'epc')]
-labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
-
+# Appel l'encodage one hot pour les colonne spécifiées
 for header in headers:
-    if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-    else:
-        enc_dic[header] = pickle.load(open(encoder_dir + f'{header}_data_encoder.pkl', 'rb'))
-
-if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
-    pickle.dump(unified_tables, open(encoding_dir + 'unified_tables.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-else:
-    unified_tables = pickle.load(open(encoding_dir + 'unified_tables.pkl', 'rb'))
+    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
 
 # %%
 """
