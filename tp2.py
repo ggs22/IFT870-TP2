@@ -11,6 +11,7 @@ import tqdm
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
@@ -218,7 +219,7 @@ def onehot_encode(table, header):
 
     count, count2 = 0, 0
     for index in table.index.values:
-        count2+=1
+        count2 += 1
         # _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         lst = []
         if type(table.loc[index, header]) is str:
@@ -1127,6 +1128,7 @@ sklearn.multioutput. En effet, ce modèle dispose d'une stratégie qui consiste 
 On décide d'utiliser un classifieur à K plus proches voisins pour notre classification.
 """
 
+
 # %%
 
 
@@ -1173,27 +1175,38 @@ On sépare les données labellisées en ensemble d'entraînement et de test.
 # %%
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-knn = KNeighborsClassifier(n_neighbors=2)
-classifier = MultiOutputClassifier(knn, n_jobs=-1)
-classifier.fit(X_train, y_train)
-train_score = classifier.score(X_train, y_train)
-print(f'Score d\'entraînement: {train_score}')
+clfs = {'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5),
+        'RandomForestClassifier': RandomForestClassifier(max_depth=3, random_state=0)}
 
-test_predictions = classifier.predict(X_test)
-test_score = classifier.score(X_test, y_test)
-print(f'Score de test: {test_score}')
+best_model = {'name': '', 'score': 0, 'model': None}
 
+for name, clf in clfs.items():
+    print(f'Modèle {name}')
+    print('## Entrainement ##')
+    classifier = MultiOutputClassifier(clf, n_jobs=1)
+    classifier.fit(X_train, y_train)
+    train_score = classifier.score(X_train, y_train)
+    print(f'Score d\'entraînement: {train_score}')
 
+    print('## Test ##')
+    test_predictions = classifier.predict(X_test)
+    test_score = classifier.score(X_test, y_test)
+    print(f'Score de test: {test_score}')
+
+    if test_score > best_model.get('score'):
+        best_model['name'], best_model['score'], best_model['model'] = name, test_score, clf
+
+print(f"Le modèle présentant le meilleur score est {best_model.get('name')} avec {best_model.get('score')}")
 # %%
 """
+Notre meilleur modèle présente des scores d'entraînement et de test sont peu concluants.
 On s'intéresse maintenant à la prédiction des objets où les valeurs de l'attribut PHARM_CLASSES sont manquantes.
 """
 
 # %%
 
-to_predict
-
-test_predictions = classifier.predict(to_predict)
+for i in test_predictions.shape[0]:
+    predictions = enc_dic.categories_[0][test_predictions[i][np.where(test_predictions != 0)]]
 
 # %%
 """
