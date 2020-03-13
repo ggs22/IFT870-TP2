@@ -219,7 +219,7 @@ def onehot_encode(table, header):
 
     count, count2 = 0, 0
     for index in table.index.values:
-        count2 += 1
+        count2+=1
         # _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         lst = []
         if type(table.loc[index, header]) is str:
@@ -1128,7 +1128,6 @@ sklearn.multioutput. En effet, ce modèle dispose d'une stratégie qui consiste 
 On décide d'utiliser un classifieur à K plus proches voisins pour notre classification.
 """
 
-
 # %%
 
 
@@ -1176,7 +1175,7 @@ On sépare les données labellisées en ensemble d'entraînement et de test.
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 clfs = {'KNeighborsClassifier': KNeighborsClassifier(n_neighbors=5),
-        'RandomForestClassifier': RandomForestClassifier(max_depth=3, random_state=0)}
+        'RandomForestClassifier':  RandomForestClassifier(max_depth=3, random_state=0)}
 
 best_model = {'name': '', 'score': 0, 'model': None}
 
@@ -1205,8 +1204,9 @@ On s'intéresse maintenant à la prédiction des objets où les valeurs de l'att
 
 # %%
 
+test_predictions = classifier.predict(to_predict)
 for i in test_predictions.shape[0]:
-    predictions = enc_dic.categories_[0][test_predictions[i][np.where(test_predictions != 0)]]
+     predictions = enc_dic.categories_[0][test_predictions[i][np.where(test_predictions!=0)]]
 
 # %%
 """
