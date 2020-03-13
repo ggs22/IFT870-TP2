@@ -1143,6 +1143,14 @@ Etant donné que nous disposons de labels avec des valeurs mutliples, nous devon
 valeurs multiples pour la classification. Sklearn propose le modèle MultiOutputClassifier de la bibliothèque 
 sklearn.multioutput. En effet, ce modèle dispose d'une stratégie qui consiste à adapter un classificateur par cible. 
 On décide d'utiliser un classifieur à K plus proches voisins pour notre classification.
+
+Étapes à compléter: à ce stade il aurait fallu povoir entrainer un modèl sur nos valeurs numérisés pour les colonnes
+d'intérêt. En paritculier, nous envisagions utiliser une classificatin par KKN puisque'il aurait possible d'entrainer le
+model sur les valeurs des dataframe contenant des informations pour la colonnes PHARM_CLASSES et de l'utiliser pour 
+effectuer la classification des entrées dont la valeur de PHARM_CLASSES est absente. 
+
+En particulier nous le module sklearn.multioutput.MultiOutputRegressor permettrait d'étendre la cpacité de classification
+des modèles qui ne support 
 """
 
 # %%
