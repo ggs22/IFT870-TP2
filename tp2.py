@@ -8,10 +8,8 @@ import os
 import pickle
 import tqdm
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import RidgeClassifierCV
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.multioutput import MultiOutputClassifier
 
 from _datetime import datetime
 from sklearn.preprocessing import OneHotEncoder
@@ -1119,7 +1117,7 @@ for header in headers:
 if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
     pickle.dump(unified_tables, open(encoding_dir + 'unified_tables.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 else:
-    unified_tables = pickle.laod(open(encoding_dir + 'unified_tables.pkl', 'rb'))
+    unified_tables = pickle.load(open(encoding_dir + 'unified_tables.pkl', 'rb'))
 
 # %%
 """
@@ -1166,34 +1164,18 @@ y = convert_table_indexes_scalar_to_multiple_col(y, y_header)
 
 # %%
 
-clfs = {'KNeighbors classifier': KNeighborsClassifier(n_neighbors=5)
-        # ,
-        #    'Multi-layer Perceptron classifier': MLPClassifier(alpha=1, max_iter=1000),
-        #    'Ridge classifier (Cross-Validation)': RidgeClassifierCV(alphas=[1e-3, 1e-2, 1e-1, 1])
-        }
-best_clf = {'name': '', 'score': 0, 'model': None}
-for name, clf in clfs.items():
-    clf.fit(X, y)
-    print(f'{name}:')
-    score = clf.score(X, y)
-    print(f'Score : {score}')
-    # if score > best_clf.get('score'):
-    #     best_clf['name'] = name
-    #     best_clf['score'] = score
-    #     best_clf['model'] = clf
+knn = KNeighborsClassifier(n_neighbors=2)
+classifier = MultiOutputClassifier(knn, n_jobs=-1)
+classifier.fit(X, y)
+predictions = classifier.predict(X)
+classifier.score(X, y)
 
-print(f"Le meilleur modèle trouvé est: {best_clf.get('name')}, avec un score de {best_clf.get('score')}")
+score = classifier.score(X, y)
+print(f'Score : {score}')
 
-# to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
-# # TODO: check : get one hot indexes encoding values to predict
-# for index, p in to_predict.iterrows():
-#     for header in X_headers:
-#         to_predict.at[index, header] = enc_dic[header].transform(p[header])
-#
-# predictions = best_clf.get('model').predict(to_predict)
-# # TODO: get categorial values from one hot values
-# # TODO: insert categorial values in unified_tables
-#
+# classifier.predict(vectorizer.transform(test_data))
+
+
 # %%
 """
 10. Conclusions
