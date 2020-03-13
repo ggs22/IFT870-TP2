@@ -894,6 +894,7 @@ d = product[product.duplicated(['PRODUCTNDC'], keep=False)]
 print(f'Nombre d\'objets dupliqués dans product par rapport à PRODUCTNDC: {len(d)}')
 
 # %%
+
 """
 # 6. Intégration des tables
 On se rend compte qu'un objet dans la table package ne dispose pas de son équivalent dans la table product. 
@@ -982,6 +983,7 @@ Notre dataframe intitulé unified_tables possède maintenant des attributs uniqu
 """
 # TODO: check unicité des lignes via PRODUCTID et NDCPACKAGECODE
 # %%
+
 """
 # 7. Proposition d'un ensemble d'attributs éliminant redondance 
 
