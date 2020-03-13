@@ -1098,30 +1098,32 @@ Comme ce sont des données catégorielles textuelles, on décide d'utiliser un e
 attributs, ainsi que notre label à prédire. Or comme les valeurs de l'attribut PHARM_CLASS présentent des valeurs 
 multiples, afin de sauvegarder de la mémoire, au lieu de stocker les vecteurs one hot éparses, on décide de sauvegarder
 plutôt les indexes des bits à 1.
+
+On garde seulement les objets présentant des valeurs de PHARM_CLASSES pour l'entraînement. Aussi, on sait que seulement
+les objets présentant une valeur contenant l'identifiant EPC, signifiant que la substance est une classe pharmaceutique
+établie, nous sera utile.
 """
 
 # %%
 
 headers = ['SUBSTANCENAME', 'DOSAGEFORMNAME', 'ROUTENAME', 'MARKETINGCATEGORYNAME', 'PHARM_CLASSES']
 
-unified_tables = unified_tables[~unified_tables['PHARM_CLASSES'].str.match(r'epc')]
-labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
+labelled_data = unified_tables.dropna(subset=['PHARM_CLASSES'])
+labelled_data = labelled_data[labelled_data['PHARM_CLASSES'].str.contains(r'epc', regex=True)]
+to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
 
 for header in headers:
-    if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
-        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
-        pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-    else:
-        enc_dic[header] = pickle.load(open(encoder_dir + f'{header}_data_encoder.pkl', 'rb'))
-
-if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
-    pickle.dump(unified_tables, open(encoding_dir + 'unified_tables.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-else:
-    unified_tables = pickle.load(open(encoding_dir + 'unified_tables.pkl', 'rb'))
+    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
 
 # %%
 """
 # 9. Modèle de classification 
+Avec nos données numérisées, nous pouvons utiliser un modèle de classification étant donné que nous avons des données
+telles que les labels sont des données catégorielles.
+Etant donné que nous disposons de labels avec des valeurs mutliples, nous devons utiliser un modèle prédisant des 
+valeurs multiples pour la classification. Sklearn propose le modèle MultiOutputClassifier de la bibliothèque 
+sklearn.multioutput. En effet, ce modèle dispose d'une stratégie qui consiste à adapter un classificateur par cible. 
+On décide d'utiliser un classifieur à K plus proches voisins pour notre classification.
 """
 
 # %%
@@ -1163,6 +1165,8 @@ X = convert_table_indexes_scalar_to_multiple_col(X, X_headers)
 y = convert_table_indexes_scalar_to_multiple_col(y, y_header)
 
 # %%
+# TODO: add test train split
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
 knn = KNeighborsClassifier(n_neighbors=2)
 classifier = MultiOutputClassifier(knn, n_jobs=-1)
@@ -1172,6 +1176,13 @@ classifier.score(X, y)
 
 score = classifier.score(X, y)
 print(f'Score : {score}')
+
+# %%
+"""
+On s'intéresse maintenant à la prédiction des objets où les valeurs de l'attribut PHARM_CLASSES sont manquantes.
+"""
+
+# %%
 
 # classifier.predict(vectorizer.transform(test_data))
 
