@@ -132,7 +132,7 @@ product_file = 'Product.csv'
 package_file = 'Package.csv'
 
 encoder_dir = 'encoders/'
-encoding_dir = 'enconding_dic/'
+encoding_dir = 'encoding_dic/'
 
 
 def assert_table_completeness(table):
@@ -217,8 +217,9 @@ def onehot_encode(table, header):
     lst2 = []
     encoder_dict = get_onehot_encoders(table, [header])
 
-    count = 0
+    count, count2 = 0, 0
     for index in table.index.values:
+        count2+=1
         # _tmp = np.zeros([1, len(encoder_dict[header].categories_[0])], dtype=int)
         lst = []
         if type(table.loc[index, header]) is str:
@@ -232,7 +233,7 @@ def onehot_encode(table, header):
         # Update loading bar
         # TODO fix 100000000% caused by sparse indexing after droping NA - not that important
         if count == 1000:
-            progress(index, table.shape[0])
+            progress(count2, table.shape[0])
             count = 0
         count += 1
 
@@ -1109,11 +1110,16 @@ unified_tables = unified_tables[~unified_tables['PHARM_CLASSES'].str.match(r'epc
 labelled_data = unified_tables.dropna(axis=0, subset=['PHARM_CLASSES'])
 
 for header in headers:
-    # if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
-    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
-    pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-    # else
-    #     enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
+    if not os.path.isfile(encoder_dir + f'{header}_data_encoder.pkl'):
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
+        pickle.dump(enc_dic[header], open(encoder_dir + f'{header}_data_encoder.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+    else:
+        enc_dic[header] = pickle.load(open(encoder_dir + f'{header}_data_encoder.pkl', 'rb'))
+
+if not os.path.isfile(encoding_dir + 'unified_tables.pkl'):
+    pickle.dump(unified_tables, open(encoding_dir + 'unified_tables.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+else:
+    unified_tables = pickle.laod(open(encoding_dir + 'unified_tables.pkl', 'rb'))
 
 # %%
 """
