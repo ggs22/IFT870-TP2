@@ -6,8 +6,10 @@ import re
 import csv
 import os
 import pickle
+
 import tqdm
 
+from path import Path
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
@@ -1116,8 +1118,19 @@ labelled_data = unified_tables.dropna(subset=['PHARM_CLASSES'])
 labelled_data = labelled_data[labelled_data['PHARM_CLASSES'].str.contains(r'epc', regex=True)]
 to_predict = unified_tables[unified_tables['PHARM_CLASSES'].isna()]
 
-for header in headers:
-    enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data, header=header)))
+fname = './encoders/enc_dic.pkl'
+if Path(fname).exists():
+    f = open(fname, 'rb')
+    enc_dic = pickle.load(f)
+else:
+    # TODO remove data cap
+    for header in headers:
+        enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data[:100], header=header)))
+    # f = ]open(fname, 'wb')
+    with open(fname, 'wb') as f:
+        pickle.dump(enc_dic, f)
+
+
 
 # %%
 """
@@ -1162,8 +1175,9 @@ if y_header in headers:
     headers.remove(y_header[0])
 X_headers = headers
 
-X = labelled_data[X_headers]
-y = labelled_data[y_header]
+# TODO remove data cap
+X = labelled_data[X_headers][:100]
+y = labelled_data[y_header][:100]
 
 X = convert_table_indexes_scalar_to_multiple_col(X, X_headers)
 y = convert_table_indexes_scalar_to_multiple_col(y, y_header)
@@ -1207,6 +1221,8 @@ On s'intéresse maintenant à la prédiction des objets où les valeurs de l'att
 # %%
 
 test_predictions = classifier.predict(to_predict)
+for i in test_predictions.shape[0]:
+     predictions = enc_dic.categories_[0][test_predictions[i][np.where(test_predictions!=0)]]
 
 # %%
 """
