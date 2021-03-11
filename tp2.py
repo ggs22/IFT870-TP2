@@ -1126,9 +1126,10 @@ else:
     # TODO remove data cap
     for header in headers:
         enc_dic[header] = time_methode(onehot_encode, header, **(dict(table=labelled_data[:100], header=header)))
-    # f = ]open(fname, 'wb')
-    with open(fname, 'wb') as f:
-        pickle.dump(enc_dic, f)
+    f = open(fname, 'wb')
+    # with open(fname, 'wb') as f:
+    pickle.dump(enc_dic, f)
+    f.close()
 
 
 
